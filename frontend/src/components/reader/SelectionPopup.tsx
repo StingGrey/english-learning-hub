@@ -71,7 +71,7 @@ export default function SelectionPopup({
   return (
     <div
       data-popup
-      className="fixed z-50 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+      className="fixed z-50 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:bg-zinc-900 dark:border-white dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]"
       style={{
         left: Math.min(x - 160, window.innerWidth - 340),
         top: y,
@@ -79,9 +79,9 @@ export default function SelectionPopup({
       }}
     >
       {/* 头部 */}
-      <div className="flex items-center justify-between px-4 py-3 border-b-2 border-black">
+      <div className="flex items-center justify-between px-4 py-3 border-b-2 border-black dark:border-white">
         <p className="font-sans font-bold text-sm truncate max-w-[240px]">&ldquo;{text}&rdquo;</p>
-        <button onClick={onClose} className="text-gray-500 hover:text-black transition-colors">
+        <button onClick={onClose} className="text-gray-500 hover:text-black transition-colors dark:text-zinc-400 dark:hover:text-white">
           <X size={14} />
         </button>
       </div>
@@ -91,23 +91,23 @@ export default function SelectionPopup({
         <div className="p-2">
           <button
             onClick={handleTranslate}
-            className="flex items-center gap-2 w-full px-3 py-2.5 font-mono text-sm text-left rounded-none hover:bg-gray-100 transition-colors"
+            className="flex items-center gap-2 w-full px-3 py-2.5 font-mono text-sm text-left rounded-none hover:bg-gray-100 transition-colors dark:hover:bg-zinc-800"
           >
-            <Languages size={16} className="text-gray-500" />
+            <Languages size={16} className="text-gray-500 dark:text-zinc-400" />
             翻译
           </button>
           <button
             onClick={handleSaveVocab}
-            className="flex items-center gap-2 w-full px-3 py-2.5 font-mono text-sm text-left rounded-none hover:bg-gray-100 transition-colors"
+            className="flex items-center gap-2 w-full px-3 py-2.5 font-mono text-sm text-left rounded-none hover:bg-gray-100 transition-colors dark:hover:bg-zinc-800"
           >
-            <BookmarkPlus size={16} className="text-gray-500" />
+            <BookmarkPlus size={16} className="text-gray-500 dark:text-zinc-400" />
             收藏单词
           </button>
           <button
             onClick={handleExplain}
-            className="flex items-center gap-2 w-full px-3 py-2.5 font-mono text-sm text-left rounded-none hover:bg-gray-100 transition-colors"
+            className="flex items-center gap-2 w-full px-3 py-2.5 font-mono text-sm text-left rounded-none hover:bg-gray-100 transition-colors dark:hover:bg-zinc-800"
           >
-            <Lightbulb size={16} className="text-gray-500" />
+            <Lightbulb size={16} className="text-gray-500 dark:text-zinc-400" />
             AI 讲解
           </button>
         </div>

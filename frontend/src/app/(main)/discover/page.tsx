@@ -69,10 +69,10 @@ export default function DiscoverPage() {
           <button
             key={d ?? "all"}
             onClick={() => setFilter(d)}
-            className={`px-3 md:px-4 py-2 font-sans font-bold text-xs uppercase tracking-widest border-2 border-black rounded-none transition-all ${
+            className={`px-3 md:px-4 py-2 font-sans font-bold text-xs uppercase tracking-widest border-2 border-black rounded-none transition-all dark:border-white ${
               filter === d
-                ? "bg-black text-white shadow-[4px_4px_0px_0px_rgba(255,0,110,1)]"
-                : "bg-white text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5"
+                ? "bg-black text-white shadow-[4px_4px_0px_0px_rgba(255,0,110,1)] dark:bg-white dark:text-black"
+                : "bg-white text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 dark:bg-zinc-950 dark:text-white dark:hover:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]"
             }`}
           >
             {difficultyLabel(d)}

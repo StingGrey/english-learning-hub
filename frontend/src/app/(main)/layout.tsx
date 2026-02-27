@@ -6,7 +6,7 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-zinc-950">
       <Sidebar />
       {/* 桌面端有侧边栏偏移，移动端有顶部栏+底部栏留白 */}
       <main className="lg:ml-56 min-h-screen pt-14 pb-16 lg:pt-0 lg:pb-0">

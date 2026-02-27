@@ -219,7 +219,7 @@ export default function SettingsPage() {
       <div className="max-w-lg space-y-10">
         {/* AI 配置 */}
         <div>
-          <h2 className="font-sans font-bold text-sm uppercase tracking-wider mb-4 pb-2 border-b-2 border-black">
+          <h2 className="font-sans font-bold text-sm uppercase tracking-wider mb-4 pb-2 border-b-2 border-black dark:border-white">
             AI 配置
           </h2>
           <p className="font-mono text-xs text-gray-500 mb-4">
@@ -239,7 +239,7 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={() => setShowKey(!showKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black transition-colors dark:text-zinc-400 dark:hover:text-white"
                 >
                   {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -279,7 +279,7 @@ export default function SettingsPage() {
                     className="s-input"
                   />
                   {showModelDropdown && filteredModels.length > 0 && (
-                    <div className="absolute z-50 left-0 right-0 top-full mt-1 border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] max-h-60 overflow-y-auto">
+                    <div className="absolute z-50 left-0 right-0 top-full mt-1 border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] max-h-60 overflow-y-auto dark:border-white dark:bg-zinc-900 dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]">
                       {filteredModels.map((m) => (
                         <button
                           key={m.id}
@@ -289,8 +289,8 @@ export default function SettingsPage() {
                             setShowModelDropdown(false);
                             setModelFilter("");
                           }}
-                          className={`w-full text-left px-3 py-2 font-mono text-xs hover:bg-black hover:text-white transition-colors flex items-center justify-between ${
-                            model === m.id ? "bg-gray-100 font-bold" : ""
+                          className={`w-full text-left px-3 py-2 font-mono text-xs hover:bg-black hover:text-white transition-colors flex items-center justify-between dark:hover:bg-white dark:hover:text-black ${
+                            model === m.id ? "bg-gray-100 font-bold dark:bg-zinc-700" : ""
                           }`}
                         >
                           <span className="truncate">{m.id}</span>
@@ -325,7 +325,7 @@ export default function SettingsPage() {
 
         {/* 学习目标 */}
         <div>
-          <h2 className="font-sans font-bold text-sm uppercase tracking-wider mb-4 pb-2 border-b-2 border-black">
+          <h2 className="font-sans font-bold text-sm uppercase tracking-wider mb-4 pb-2 border-b-2 border-black dark:border-white">
             学习设置
           </h2>
           <label className="s-label">学习目标</label>
@@ -339,10 +339,10 @@ export default function SettingsPage() {
               <button
                 key={opt.value}
                 onClick={() => setGoal(opt.value)}
-                className={`rounded-none py-3 font-sans font-bold text-xs uppercase tracking-wider border-2 border-black transition-all ${
+                className={`rounded-none py-3 font-sans font-bold text-xs uppercase tracking-wider border-2 border-black transition-all dark:border-white ${
                   goal === opt.value
-                    ? "bg-black text-white"
-                    : "bg-white text-gray-500 hover:text-black"
+                    ? "bg-black text-white dark:bg-white dark:text-black"
+                    : "bg-white text-gray-500 hover:text-black dark:bg-zinc-950 dark:text-zinc-400 dark:hover:text-white"
                 }`}
               >
                 {opt.label}
@@ -382,7 +382,7 @@ export default function SettingsPage() {
 
         {/* WebDAV 同步 */}
         <div>
-          <h2 className="font-sans font-bold text-sm uppercase tracking-wider mb-4 pb-2 border-b-2 border-black flex items-center gap-2">
+          <h2 className="font-sans font-bold text-sm uppercase tracking-wider mb-4 pb-2 border-b-2 border-black flex items-center gap-2 dark:border-white">
             <Cloud size={16} />
             数据同步与备份
           </h2>
@@ -424,7 +424,7 @@ export default function SettingsPage() {
                 <button
                   type="button"
                   onClick={() => setShowDavPass(!showDavPass)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black transition-colors dark:text-zinc-400 dark:hover:text-white"
                 >
                   {showDavPass ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -469,7 +469,7 @@ export default function SettingsPage() {
             </div>
 
             {/* 同步操作 */}
-            <div className="border-2 border-black p-4 space-y-3">
+            <div className="border-2 border-black p-4 space-y-3 dark:border-white">
               <p className="s-label">同步操作</p>
               <div className="flex gap-2">
                 <button
@@ -495,7 +495,7 @@ export default function SettingsPage() {
             </div>
 
             {/* 本地导入导出 */}
-            <div className="border-2 border-black p-4 space-y-3">
+            <div className="border-2 border-black p-4 space-y-3 dark:border-white">
               <p className="s-label">本地备份</p>
               <p className="font-mono text-xs text-gray-500">
                 不使用 WebDAV？也可以手动导出/导入 JSON 文件来迁移数据。

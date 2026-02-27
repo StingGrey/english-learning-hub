@@ -44,23 +44,23 @@ export default function VocabPage() {
       </div>
 
       {/* 标签切换 */}
-      <div className="flex mb-6 lg:mb-8 border-2 border-black rounded-none">
+      <div className="flex mb-6 lg:mb-8 border-2 border-black rounded-none dark:border-white">
         <button
           onClick={() => setTab("all")}
           className={`flex-1 py-2 md:py-3 font-sans font-bold text-xs uppercase tracking-widest text-center transition-all rounded-none ${
             tab === "all"
-              ? "bg-black text-white"
-              : "bg-white text-gray-500 hover:text-black"
+              ? "bg-black text-white dark:bg-white dark:text-black"
+              : "bg-white text-gray-500 hover:text-black dark:bg-zinc-950 dark:text-zinc-400 dark:hover:text-white"
           }`}
         >
           全部单词 ({vocabList?.length ?? 0})
         </button>
         <button
           onClick={() => setTab("review")}
-          className={`flex-1 py-2 md:py-3 font-sans font-bold text-xs uppercase tracking-widest text-center transition-all rounded-none border-l-2 border-black ${
+          className={`flex-1 py-2 md:py-3 font-sans font-bold text-xs uppercase tracking-widest text-center transition-all rounded-none border-l-2 border-black dark:border-white ${
             tab === "review"
-              ? "bg-black text-white"
-              : "bg-white text-gray-500 hover:text-black"
+              ? "bg-black text-white dark:bg-white dark:text-black"
+              : "bg-white text-gray-500 hover:text-black dark:bg-zinc-950 dark:text-zinc-400 dark:hover:text-white"
           }`}
         >
           今日复习 ({reviewList?.length ?? 0})
@@ -80,7 +80,7 @@ export default function VocabPage() {
             vocabList?.map((vocab: any) => (
               <div
                 key={vocab.id}
-                className="border-2 border-black rounded-none bg-white p-3 md:p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(255,0,110,1)] hover:-translate-y-0.5 transition-all"
+                className="border-2 border-black rounded-none bg-white p-3 md:p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(255,0,110,1)] hover:-translate-y-0.5 transition-all dark:border-white dark:bg-zinc-900 dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]"
               >
                 <div className="flex flex-wrap items-center gap-3 md:gap-4">
                   <div className="flex-1 min-w-0">
@@ -110,7 +110,7 @@ export default function VocabPage() {
                     </span>
                     <button
                       onClick={() => handleDelete(vocab.id)}
-                      className="p-1.5 border-2 border-black rounded-none text-gray-500 hover:text-accent hover:border-accent transition-all"
+                      className="p-1.5 border-2 border-black rounded-none text-gray-500 hover:text-accent hover:border-accent transition-all dark:border-white dark:text-zinc-400"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -138,7 +138,7 @@ export default function VocabPage() {
                 <button
                   key={vocab.id}
                   onClick={() => setReviewingId(vocab.id)}
-                  className="flex items-center justify-between w-full border-2 border-black rounded-none bg-white p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(255,0,110,1)] hover:-translate-y-0.5 transition-all text-left"
+                  className="flex items-center justify-between w-full border-2 border-black rounded-none bg-white p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(255,0,110,1)] hover:-translate-y-0.5 transition-all text-left dark:border-white dark:bg-zinc-900 dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]"
                 >
                   <div>
                     <span className="font-sans font-bold text-base">{vocab.word}</span>
@@ -146,7 +146,7 @@ export default function VocabPage() {
                       (已复习 {vocab.repetitions} 次)
                     </span>
                   </div>
-                  <ChevronRight size={16} className="text-black" />
+                  <ChevronRight size={16} className="text-black dark:text-white" />
                 </button>
               ))}
             </div>
@@ -177,7 +177,7 @@ export default function VocabPage() {
                       </p>
                     )}
                     {currentReview?.example_sentence && (
-                      <p className="font-mono text-xs md:text-sm text-gray-500 mt-3 pt-3 border-t-2 border-black">
+                      <p className="font-mono text-xs md:text-sm text-gray-500 mt-3 pt-3 border-t-2 border-black dark:border-white dark:text-zinc-400">
                         {currentReview.example_sentence}
                       </p>
                     )}

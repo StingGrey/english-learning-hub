@@ -45,14 +45,14 @@ export default function Sidebar() {
   return (
     <>
       {/* ─── 桌面端侧边栏 ─── */}
-      <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-56 bg-white border-r-4 border-black flex-col z-40">
+      <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-56 bg-white border-r-4 border-black flex-col z-40 dark:bg-zinc-950 dark:border-white">
         {/* Logo */}
-        <div className="px-5 py-6 border-b-2 border-black">
+        <div className="px-5 py-6 border-b-2 border-black dark:border-white">
           <Link href="/" className="block">
             <h1 className="font-black text-xl tracking-wider leading-none">
               ENGLISH
             </h1>
-            <p className="font-mono text-xs text-gray-500 mt-1">学习中心</p>
+            <p className="font-mono text-xs text-gray-500 mt-1 dark:text-zinc-400">学习中心</p>
           </Link>
         </div>
 
@@ -72,8 +72,8 @@ export default function Sidebar() {
                   flex items-center gap-3 px-5 py-3 font-sans text-sm transition-all duration-150
                   ${
                     isActive
-                      ? "bg-black text-white font-bold"
-                      : "text-gray-500 hover:text-black hover:bg-gray-50"
+                      ? "bg-black text-white font-bold dark:bg-white dark:text-zinc-950"
+                      : "text-gray-500 hover:text-black hover:bg-gray-50 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-zinc-800"
                   }
                 `}
               >
@@ -85,15 +85,15 @@ export default function Sidebar() {
         </nav>
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t-2 border-black">
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-gray-400">
+        <div className="px-5 py-4 border-t-2 border-black dark:border-white">
+          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-gray-400 dark:text-zinc-600">
             Swiss Style
           </p>
         </div>
       </aside>
 
       {/* ─── 移动端/iPad 顶部导航栏 ─── */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b-2 border-black">
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b-2 border-black dark:bg-zinc-950 dark:border-white">
         <div className="flex items-center justify-between px-4 h-14">
           <Link href="/" className="flex items-center gap-2">
             <h1 className="font-black text-lg tracking-wider leading-none">
@@ -102,7 +102,7 @@ export default function Sidebar() {
           </Link>
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="p-2 border-2 border-black transition-all hover:bg-black hover:text-white"
+            className="p-2 border-2 border-black transition-all hover:bg-black hover:text-white dark:border-white dark:text-white dark:hover:bg-white dark:hover:text-black"
           >
             {mobileOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -110,7 +110,7 @@ export default function Sidebar() {
 
         {/* 展开的移动端菜单 */}
         {mobileOpen && (
-          <nav className="border-t-2 border-black bg-white max-h-[calc(100vh-3.5rem)] overflow-y-auto">
+          <nav className="border-t-2 border-black bg-white max-h-[calc(100vh-3.5rem)] overflow-y-auto dark:border-white dark:bg-zinc-950">
             {NAV_ITEMS.map((item) => {
               const isActive =
                 pathname === item.href ||
@@ -124,10 +124,11 @@ export default function Sidebar() {
                   onClick={() => setMobileOpen(false)}
                   className={`
                     flex items-center gap-3 px-5 py-3.5 font-sans text-sm border-b border-gray-100 transition-all
+                    dark:border-zinc-800
                     ${
                       isActive
-                        ? "bg-black text-white font-bold"
-                        : "text-gray-600 hover:text-black hover:bg-gray-50"
+                        ? "bg-black text-white font-bold dark:bg-white dark:text-zinc-950"
+                        : "text-gray-600 hover:text-black hover:bg-gray-50 dark:text-zinc-400 dark:hover:text-white dark:hover:bg-zinc-800"
                     }
                   `}
                 >
@@ -141,7 +142,7 @@ export default function Sidebar() {
       </header>
 
       {/* ─── 移动端底部快捷导航 ─── */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t-2 border-black">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t-2 border-black dark:bg-zinc-950 dark:border-white">
         <div className="flex items-center justify-around h-14">
           {MOBILE_NAV_ITEMS.map((item) => {
             const isActive =
@@ -155,8 +156,8 @@ export default function Sidebar() {
                 href={item.href}
                 className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-all ${
                   isActive
-                    ? "text-black font-bold"
-                    : "text-gray-400 hover:text-black"
+                    ? "text-black font-bold dark:text-white"
+                    : "text-gray-400 hover:text-black dark:text-zinc-600 dark:hover:text-white"
                 }`}
               >
                 <Icon size={18} strokeWidth={isActive ? 2.5 : 1.5} />
@@ -172,7 +173,7 @@ export default function Sidebar() {
       {/* 移动端菜单遮罩 */}
       {mobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/30 z-40"
+          className="lg:hidden fixed inset-0 bg-black/30 z-40 dark:bg-white/10"
           onClick={() => setMobileOpen(false)}
         />
       )}
