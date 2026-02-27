@@ -5,11 +5,13 @@
 /*
  * Swiss International Style — Hard Prompt
  * rounded-none | border-black | shadow-[硬阴影] | font-black 标题 | font-mono 正文
+ * Dark mode: auto-switches via prefers-color-scheme media query (Tailwind darkMode: 'media')
  */
 
 @layer base {
   body {
-    @apply bg-white text-black font-sans antialiased;
+    @apply bg-white text-black font-sans antialiased
+           dark:bg-zinc-950 dark:text-zinc-50;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -24,6 +26,13 @@
     @apply bg-black text-white;
   }
 
+  @media (prefers-color-scheme: dark) {
+    ::selection {
+      background: #ffffff;
+      color: #09090b;
+    }
+  }
+
   * {
     border-radius: 0 !important;
   }
@@ -32,13 +41,16 @@
 @layer components {
   /* ── 卡片 ── */
   .s-card {
-    @apply rounded-none border-2 border-black bg-white p-4 md:p-6;
+    @apply rounded-none border-2 border-black bg-white p-4 md:p-6
+           dark:border-white dark:bg-zinc-900 dark:text-zinc-50;
   }
 
   .s-card-hover {
     @apply s-card shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]
            hover:shadow-[4px_4px_0px_0px_rgba(255,0,110,1)]
-           hover:-translate-y-0.5 transition-all;
+           hover:-translate-y-0.5 transition-all
+           dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]
+           dark:hover:shadow-[4px_4px_0px_0px_rgba(255,0,110,1)];
   }
 
   /* ── 按钮 ── */
@@ -48,7 +60,8 @@
            bg-black text-white border-2 border-black
            shadow-[4px_4px_0px_0px_rgba(255,0,110,1)]
            hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]
-           active:opacity-70 transition-all duration-150;
+           active:opacity-70 transition-all duration-150
+           dark:bg-white dark:text-zinc-950 dark:border-white;
   }
 
   .s-btn-outline {
@@ -57,20 +70,24 @@
            bg-white text-black border-2 border-black
            shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]
            hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]
-           active:opacity-70 transition-all duration-150;
+           active:opacity-70 transition-all duration-150
+           dark:bg-zinc-950 dark:text-white dark:border-white
+           dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)];
   }
 
   .s-btn-ghost {
     @apply rounded-none font-sans font-bold text-sm
            px-3 py-1.5 text-gray-500 hover:text-black
-           transition-opacity duration-150;
+           transition-opacity duration-150
+           dark:text-zinc-400 dark:hover:text-white;
   }
 
   .s-btn-sm {
     @apply rounded-none font-sans font-bold text-xs
            px-3 py-1.5 border-2 border-black
            transition-all duration-150
-           active:opacity-70;
+           active:opacity-70
+           dark:border-white dark:text-white;
   }
 
   /* ── 输入框 ── */
@@ -79,7 +96,9 @@
            border-2 border-black font-mono text-sm md:text-base
            bg-white text-black placeholder-gray-400
            focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(255,0,110,1)]
-           transition-all;
+           transition-all
+           dark:border-white dark:bg-zinc-900 dark:text-white
+           dark:placeholder-zinc-500;
   }
 
   .s-textarea {
@@ -88,12 +107,14 @@
 
   /* ── 标签 ── */
   .s-label {
-    @apply block font-sans font-bold text-xs uppercase tracking-widest text-gray-500 mb-2;
+    @apply block font-sans font-bold text-xs uppercase tracking-widest text-gray-500 mb-2
+           dark:text-zinc-400;
   }
 
   .s-tag {
     @apply inline-block rounded-none px-2 py-0.5 text-xs font-bold uppercase tracking-wider
-           border-2 border-black text-black;
+           border-2 border-black text-black
+           dark:border-white dark:text-white;
   }
 
   .s-tag-accent {
@@ -103,11 +124,12 @@
 
   .s-tag-filled {
     @apply inline-block rounded-none px-2 py-0.5 text-xs font-bold uppercase tracking-wider
-           bg-black text-white;
+           bg-black text-white
+           dark:bg-white dark:text-black;
   }
 
   /* ── 分割线 ── */
   .s-divider {
-    @apply border-t-2 border-black;
+    @apply border-t-2 border-black dark:border-white;
   }
 }

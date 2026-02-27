@@ -66,7 +66,7 @@ export default function StatsPage() {
       <div>
         <p className="s-label mb-4">每日明细</p>
         <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
-          <div className="border-2 border-black min-w-[360px]">
+          <div className="border-2 border-black min-w-[360px] dark:border-white">
             <div className="grid grid-cols-3 bg-black px-3 md:px-5 py-3">
               <span className="font-sans font-bold text-xs uppercase tracking-widest text-white">
                 日期
@@ -81,7 +81,7 @@ export default function StatsPage() {
             {stats?.daily_breakdown?.map((day: any) => (
               <div
                 key={day.date}
-                className="grid grid-cols-3 px-3 md:px-5 py-3 border-t-2 border-black"
+                className="grid grid-cols-3 px-3 md:px-5 py-3 border-t-2 border-black dark:border-white"
               >
                 <span className="font-mono text-xs md:text-sm">{day.date}</span>
                 <span className="font-mono text-xs md:text-sm text-center">

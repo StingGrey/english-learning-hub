@@ -90,10 +90,10 @@ export default function SpeakingPage() {
               if (turns.length === 0) return;
               startNew();
             }}
-            className={`px-3 md:px-4 py-2 font-sans font-bold text-xs uppercase tracking-wider border-2 border-black rounded-none transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] ${
+            className={`px-3 md:px-4 py-2 font-sans font-bold text-xs uppercase tracking-wider border-2 border-black rounded-none transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] dark:border-white dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)] ${
               scenario === s
-                ? "bg-black text-white"
-                : "bg-white text-black hover:bg-black hover:text-white"
+                ? "bg-black text-white dark:bg-white dark:text-black"
+                : "bg-white text-black hover:bg-black hover:text-white dark:bg-zinc-950 dark:text-white dark:hover:bg-white dark:hover:text-black"
             }`}
           >
             {scenarioLabels[s]}
@@ -107,7 +107,7 @@ export default function SpeakingPage() {
       </div>
 
       {/* 聊天区域 */}
-      <div className="flex-1 overflow-y-auto border-2 border-black rounded-none bg-white p-3 md:p-6 space-y-4 md:space-y-6">
+      <div className="flex-1 overflow-y-auto border-2 border-black rounded-none bg-white p-3 md:p-6 space-y-4 md:space-y-6 dark:border-white dark:bg-zinc-900">
         {turns.length === 0 && (
           <div className="text-center py-8 md:py-16">
             <p className="font-mono text-xs md:text-sm text-gray-500">
@@ -121,8 +121,8 @@ export default function SpeakingPage() {
             <div
               className={`max-w-[85%] md:max-w-[75%] rounded-none ${
                 turn.role === "user"
-                  ? "bg-black text-white p-3 md:p-4 shadow-[4px_4px_0px_0px_rgba(255,0,110,1)]"
-                  : "bg-gray-100 border-2 border-black p-3 md:p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+                  ? "bg-black text-white p-3 md:p-4 shadow-[4px_4px_0px_0px_rgba(255,0,110,1)] dark:bg-white dark:text-black"
+                  : "bg-gray-100 border-2 border-black p-3 md:p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:bg-zinc-800 dark:border-white dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]"
               }`}
             >
               <p className="font-mono text-xs md:text-sm leading-relaxed">{turn.content}</p>
@@ -156,7 +156,7 @@ export default function SpeakingPage() {
 
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-gray-100 border-2 border-black rounded-none p-3 md:p-4">
+            <div className="bg-gray-100 border-2 border-black rounded-none p-3 md:p-4 dark:bg-zinc-800 dark:border-white">
               <p className="font-mono text-xs md:text-sm text-gray-500">思考中...</p>
             </div>
           </div>
