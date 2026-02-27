@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useFetch } from "@/hooks/useFetch";
 import SelectionPopup from "@/components/reader/SelectionPopup";
-import { ArrowLeft, BookOpen, Globe } from "lucide-react";
+import { ArrowLeft, BookOpen, Globe, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -19,6 +19,8 @@ function ReaderContent() {
   );
 
   const [viewMode, setViewMode] = useState<"en" | "bilingual">("en");
+  const [sentences, setSentences] = useState<{ index: number; text_en: string; text_zh: string }[]>([]);
+  const [translating, setTranslating] = useState(false);
   const [popup, setPopup] = useState<{
     text: string;
     context: string;
@@ -27,6 +29,44 @@ function ReaderContent() {
   } | null>(null);
 
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // 当文章加载完成后，初始化本地 sentences 状态
+  useEffect(() => {
+    if (article?.sentences) {
+      setSentences(article.sentences);
+    }
+  }, [article]);
+
+  // 切换到双语模式时，如果没有翻译则自动触发 AI 翻译
+  const handleBilingualSwitch = useCallback(async () => {
+    setViewMode("bilingual");
+    if (!sentences.length) return;
+
+    const hasTranslations = sentences.some((s) => s.text_zh && s.text_zh.trim());
+    if (hasTranslations) return;
+
+    setTranslating(true);
+    try {
+      const texts = sentences.map((s) => s.text_en);
+      const result = await api.translate.sentences(texts);
+      const translations = result.translations;
+
+      const updated = sentences.map((s, i) => ({
+        ...s,
+        text_zh: translations[i] || "",
+      }));
+      setSentences(updated);
+
+      // 持久化到 IndexedDB
+      if (articleId) {
+        await api.content.saveTranslations(articleId, translations);
+      }
+    } catch (e) {
+      console.error("翻译失败:", e);
+    } finally {
+      setTranslating(false);
+    }
+  }, [sentences, articleId]);
 
   const handleMouseUp = useCallback(() => {
     const selection = window.getSelection();
@@ -138,15 +178,16 @@ function ReaderContent() {
           英文
         </button>
         <button
-          onClick={() => setViewMode("bilingual")}
+          onClick={handleBilingualSwitch}
+          disabled={translating}
           className={`flex items-center gap-1.5 px-3 py-2 md:px-4 font-sans font-bold text-xs uppercase tracking-widest border-2 border-black rounded-none transition-all dark:border-white ${
             viewMode === "bilingual"
               ? "bg-black text-white shadow-[4px_4px_0px_0px_rgba(255,0,110,1)] dark:bg-white dark:text-black"
               : "bg-white text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 dark:bg-zinc-950 dark:text-white dark:hover:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]"
           }`}
         >
-          <Globe size={12} />
-          双语
+          {translating ? <Loader2 size={12} className="animate-spin" /> : <Globe size={12} />}
+          {translating ? "翻译中..." : "双语"}
         </button>
       </div>
 
@@ -166,9 +207,9 @@ function ReaderContent() {
         onMouseUp={handleMouseUp}
         className="reader-content"
       >
-        {article.sentences && article.sentences.length > 0 ? (
+        {sentences && sentences.length > 0 ? (
           <div className="space-y-4">
-            {article.sentences.map((sentence: any, i: number) => (
+            {sentences.map((sentence, i) => (
               <div key={i} className="group">
                 <p className="font-mono text-sm md:text-base leading-relaxed text-black dark:text-zinc-50">
                   {sentence.text_en}

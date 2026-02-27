@@ -6,29 +6,47 @@ import { useFetch } from "@/hooks/useFetch";
 import Link from "next/link";
 import { RefreshCw } from "lucide-react";
 
+const CATEGORY_LABELS: Record<string, string> = {
+  world: "世界",
+  general: "综合",
+  science: "科学",
+  technology: "科技",
+  business: "商业",
+  "ai-generated": "AI生成",
+};
+
 export default function DiscoverPage() {
   const { data: articles, loading, refetch } = useFetch(
-    () => api.content.articles({ limit: 30 }),
+    () => api.content.articles({ limit: 50 }),
     []
   );
+  const { data: categories } = useFetch(() => api.content.categories(), []);
   const [fetching, setFetching] = useState(false);
+  const [fetchMsg, setFetchMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [filter, setFilter] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
 
   const handleFetch = async () => {
     setFetching(true);
+    setFetchMsg(null);
     try {
-      await api.content.fetch();
-      refetch();
-    } catch (e) {
-      console.error(e);
+      const result = await api.content.fetch();
+      await refetch();
+      setFetchMsg({ text: `获取到 ${result.new_articles} 篇新文章`, ok: true });
+      setTimeout(() => setFetchMsg(null), 3000);
+    } catch (e: any) {
+      setFetchMsg({ text: e?.message || "获取失败，请检查网络", ok: false });
+      setTimeout(() => setFetchMsg(null), 4000);
     } finally {
       setFetching(false);
     }
   };
 
-  const filtered = filter
-    ? articles?.filter((a: any) => a.difficulty === filter)
-    : articles;
+  const filtered = (articles || []).filter((a: any) => {
+    if (filter && a.difficulty !== filter) return false;
+    if (categoryFilter && a.category !== categoryFilter) return false;
+    return true;
+  });
 
   const difficultyLabel = (d: string | null) => {
     if (!d) return "全部";
@@ -53,18 +71,25 @@ export default function DiscoverPage() {
           <p className="s-label">发现</p>
           <h1 className="font-black text-xl md:text-2xl lg:text-3xl tracking-tight">文章列表</h1>
         </div>
-        <button
-          onClick={handleFetch}
-          disabled={fetching}
-          className="s-btn flex items-center gap-2"
-        >
-          <RefreshCw size={14} className={fetching ? "animate-spin" : ""} />
-          {fetching ? "获取中..." : "获取新文章"}
-        </button>
+        <div className="flex flex-col items-end gap-2">
+          <button
+            onClick={handleFetch}
+            disabled={fetching}
+            className="s-btn flex items-center gap-2"
+          >
+            <RefreshCw size={14} className={fetching ? "animate-spin" : ""} />
+            {fetching ? "获取中..." : "获取新文章"}
+          </button>
+          {fetchMsg && (
+            <p className={`font-mono text-xs ${fetchMsg.ok ? "text-green-600" : "text-red-500"}`}>
+              {fetchMsg.text}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* 难度筛选 */}
-      <div className="flex flex-wrap gap-2 mb-6 md:mb-8">
+      <div className="flex flex-wrap gap-2 mb-3">
         {[null, "easy", "medium", "hard"].map((d) => (
           <button
             key={d ?? "all"}
@@ -79,6 +104,35 @@ export default function DiscoverPage() {
           </button>
         ))}
       </div>
+
+      {/* 分类筛选 */}
+      {categories && categories.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-6 md:mb-8">
+          <button
+            onClick={() => setCategoryFilter(null)}
+            className={`px-3 py-1.5 font-mono text-xs border border-black rounded-none transition-all dark:border-white ${
+              categoryFilter === null
+                ? "bg-black text-white dark:bg-white dark:text-black"
+                : "bg-white text-gray-500 hover:text-black dark:bg-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+            }`}
+          >
+            所有分类
+          </button>
+          {categories.map((cat: string) => (
+            <button
+              key={cat}
+              onClick={() => setCategoryFilter(cat)}
+              className={`px-3 py-1.5 font-mono text-xs border border-black rounded-none transition-all dark:border-white ${
+                categoryFilter === cat
+                  ? "bg-black text-white dark:bg-white dark:text-black"
+                  : "bg-white text-gray-500 hover:text-black dark:bg-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+              }`}
+            >
+              {CATEGORY_LABELS[cat] || cat}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 文章列表 */}
       {loading ? (
@@ -112,6 +166,11 @@ export default function DiscoverPage() {
                     {article.source_name && (
                       <span className="s-label !mb-0">
                         {article.source_name}
+                      </span>
+                    )}
+                    {article.category && CATEGORY_LABELS[article.category] && (
+                      <span className="font-mono text-[10px] text-gray-400 uppercase">
+                        {CATEGORY_LABELS[article.category]}
                       </span>
                     )}
                   </div>
