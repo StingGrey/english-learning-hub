@@ -88,19 +88,28 @@ function parseVertexConfig(raw?: string): VertexConfig | null {
 
 async function getConfig(): Promise<AIConfig> {
   const profile = await db.userProfile.toCollection().first();
-  if (!profile || !profile.ai_api_key) {
-    throw new Error("请先在设置页面配置 AI API Key");
+  if (!profile) {
+    throw new Error("请先在设置页面配置 AI 参数");
   }
 
   const apiFormat = (profile.ai_api_format || "openai") as AIFormat;
+  const vertexConfig = parseVertexConfig(profile.ai_vertex_config);
+  const apiKey = (profile.ai_api_key || "").trim();
+  const requiresApiKey =
+    apiFormat === "openai" || apiFormat === "claude" || (apiFormat === "gemini" && !vertexConfig?.enabled);
+
+  if (requiresApiKey && !apiKey) {
+    throw new Error("请先在设置页面配置 AI API Key");
+  }
+
   const baseUrl = profile.ai_base_url || DEFAULT_BASE_URLS[apiFormat] || DEFAULT_BASE_URLS.openai;
 
   return {
-    apiKey: profile.ai_api_key,
+    apiKey,
     baseUrl,
     model: profile.ai_model || "gpt-4o-mini",
     apiFormat,
-    vertexConfig: parseVertexConfig(profile.ai_vertex_config),
+    vertexConfig,
   };
 }
 
