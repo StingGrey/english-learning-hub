@@ -38,16 +38,16 @@ export default function VocabPage() {
   return (
     <div>
       {/* 页面标题 */}
-      <div className="mb-12">
+      <div className="mb-8 lg:mb-12">
         <p className="s-label">词汇本</p>
-        <h1 className="font-black">单词库</h1>
+        <h1 className="text-xl md:text-2xl font-black">单词库</h1>
       </div>
 
       {/* 标签切换 */}
-      <div className="flex mb-8 border-2 border-black rounded-none">
+      <div className="flex mb-6 lg:mb-8 border-2 border-black rounded-none">
         <button
           onClick={() => setTab("all")}
-          className={`flex-1 py-3 font-sans font-bold text-xs uppercase tracking-widest text-center transition-all rounded-none ${
+          className={`flex-1 py-2 md:py-3 font-sans font-bold text-xs uppercase tracking-widest text-center transition-all rounded-none ${
             tab === "all"
               ? "bg-black text-white"
               : "bg-white text-gray-500 hover:text-black"
@@ -57,7 +57,7 @@ export default function VocabPage() {
         </button>
         <button
           onClick={() => setTab("review")}
-          className={`flex-1 py-3 font-sans font-bold text-xs uppercase tracking-widest text-center transition-all rounded-none border-l-2 border-black ${
+          className={`flex-1 py-2 md:py-3 font-sans font-bold text-xs uppercase tracking-widest text-center transition-all rounded-none border-l-2 border-black ${
             tab === "review"
               ? "bg-black text-white"
               : "bg-white text-gray-500 hover:text-black"
@@ -80,11 +80,11 @@ export default function VocabPage() {
             vocabList?.map((vocab: any) => (
               <div
                 key={vocab.id}
-                className="border-2 border-black rounded-none bg-white p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(255,0,110,1)] hover:-translate-y-0.5 transition-all"
+                className="border-2 border-black rounded-none bg-white p-3 md:p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[4px_4px_0px_0px_rgba(255,0,110,1)] hover:-translate-y-0.5 transition-all"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-3 md:gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2">
+                    <div className="flex items-baseline gap-2 flex-wrap">
                       <span className="font-sans font-bold text-base">{vocab.word}</span>
                       {vocab.pos && (
                         <span className="font-sans font-bold text-xs uppercase tracking-widest text-gray-500">
@@ -95,17 +95,17 @@ export default function VocabPage() {
                         <span className="s-tag-accent">已掌握</span>
                       )}
                     </div>
-                    <p className="font-mono text-sm text-gray-500 mt-1">
+                    <p className="font-mono text-xs md:text-sm text-gray-500 mt-1">
                       {vocab.definition}
                     </p>
                     {vocab.example_sentence && (
-                      <p className="font-mono text-sm text-gray-500 mt-1 truncate">
+                      <p className="font-mono text-xs md:text-sm text-gray-500 mt-1 truncate">
                         {vocab.example_sentence}
                       </p>
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="s-tag">
+                    <span className="s-tag hidden md:inline-block">
                       复习 {vocab.repetitions} 次
                     </span>
                     <button
@@ -152,8 +152,8 @@ export default function VocabPage() {
             </div>
           ) : (
             /* 复习卡片 */
-            <div className="s-card max-w-lg mx-auto text-center py-12 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-              <p className="text-3xl font-black mb-8">{currentReview?.word}</p>
+            <div className="s-card max-w-lg mx-auto text-center py-8 md:py-12 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <p className="text-2xl md:text-3xl font-black mb-6 md:mb-8">{currentReview?.word}</p>
 
               {!showAnswer ? (
                 <button
@@ -164,20 +164,20 @@ export default function VocabPage() {
                 </button>
               ) : (
                 <>
-                  <div className="mb-8 text-left px-8">
+                  <div className="mb-6 md:mb-8 text-left px-4 md:px-8">
                     {currentReview?.pos && (
                       <p className="s-label mb-1">
                         {currentReview.pos}
                       </p>
                     )}
-                    <p className="font-mono text-sm mb-2">{currentReview?.definition}</p>
+                    <p className="font-mono text-xs md:text-sm mb-2">{currentReview?.definition}</p>
                     {currentReview?.definition_en && (
-                      <p className="font-mono text-sm text-gray-500 mb-2">
+                      <p className="font-mono text-xs md:text-sm text-gray-500 mb-2">
                         {currentReview.definition_en}
                       </p>
                     )}
                     {currentReview?.example_sentence && (
-                      <p className="font-mono text-sm text-gray-500 mt-3 pt-3 border-t-2 border-black">
+                      <p className="font-mono text-xs md:text-sm text-gray-500 mt-3 pt-3 border-t-2 border-black">
                         {currentReview.example_sentence}
                       </p>
                     )}
@@ -186,7 +186,7 @@ export default function VocabPage() {
                   <p className="s-label mb-3 text-center">
                     记忆程度如何？
                   </p>
-                  <div className="flex justify-center gap-2">
+                  <div className="flex flex-wrap justify-center gap-2">
                     {[
                       { q: 0, label: "忘了", style: "border-2 border-red-500 text-red-500 bg-white hover:bg-red-500 hover:text-white" },
                       { q: 2, label: "困难", style: "border-2 border-orange-500 text-orange-500 bg-white hover:bg-orange-500 hover:text-white" },
@@ -196,7 +196,7 @@ export default function VocabPage() {
                       <button
                         key={opt.q}
                         onClick={() => handleReview(reviewingId!, opt.q)}
-                        className={`px-5 py-2 font-sans font-bold text-xs uppercase tracking-wider rounded-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all ${opt.style}`}
+                        className={`px-3 md:px-5 py-2 font-sans font-bold text-xs uppercase tracking-wider rounded-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all ${opt.style}`}
                       >
                         {opt.label}
                       </button>

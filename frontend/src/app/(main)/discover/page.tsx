@@ -48,10 +48,10 @@ export default function DiscoverPage() {
   return (
     <div>
       {/* 页面标题 */}
-      <div className="flex items-end justify-between mb-12">
+      <div className="flex items-end justify-between mb-8 lg:mb-12">
         <div>
           <p className="s-label">发现</p>
-          <h1 className="font-black text-3xl md:text-4xl tracking-tight">文章列表</h1>
+          <h1 className="font-black text-xl md:text-2xl lg:text-3xl tracking-tight">文章列表</h1>
         </div>
         <button
           onClick={handleFetch}
@@ -64,12 +64,12 @@ export default function DiscoverPage() {
       </div>
 
       {/* 难度筛选 */}
-      <div className="flex gap-2 mb-8">
+      <div className="flex flex-wrap gap-2 mb-6 md:mb-8">
         {[null, "easy", "medium", "hard"].map((d) => (
           <button
             key={d ?? "all"}
             onClick={() => setFilter(d)}
-            className={`px-4 py-2 font-sans font-bold text-xs uppercase tracking-widest border-2 border-black rounded-none transition-all ${
+            className={`px-3 md:px-4 py-2 font-sans font-bold text-xs uppercase tracking-widest border-2 border-black rounded-none transition-all ${
               filter === d
                 ? "bg-black text-white shadow-[4px_4px_0px_0px_rgba(255,0,110,1)]"
                 : "bg-white text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5"
@@ -91,12 +91,12 @@ export default function DiscoverPage() {
           </button>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
           {filtered.map((article: any) => (
             <Link
               key={article.id}
               href={`/reader/?id=${article.id}`}
-              className="s-card-hover block p-5"
+              className="s-card-hover block p-4 md:p-5"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
@@ -104,7 +104,7 @@ export default function DiscoverPage() {
                     {article.title}
                   </h3>
                   {article.summary && (
-                    <p className="font-mono text-sm text-gray-500 mt-1.5 line-clamp-2 leading-relaxed">
+                    <p className="font-mono text-xs md:text-sm text-gray-500 mt-1.5 line-clamp-2 leading-relaxed">
                       {article.summary}
                     </p>
                   )}

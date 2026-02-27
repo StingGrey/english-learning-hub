@@ -28,12 +28,12 @@ export default function WritingPage() {
 
   return (
     <div>
-      <div className="mb-12">
+      <div className="mb-8 lg:mb-12">
         <p className="s-label">写作批改</p>
         <h1 className="font-black">英文作文批改</h1>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
         {/* 输入面板 */}
         <div>
           <div className="mb-4">
@@ -91,9 +91,9 @@ export default function WritingPage() {
             <div className="space-y-4">
               {/* 分数 */}
               {feedback.score && (
-                <div className="s-card text-center py-6">
+                <div className="s-card text-center py-4 md:py-6">
                   <p className="s-label">综合评分</p>
-                  <p className="text-5xl font-black">{feedback.score}</p>
+                  <p className="text-4xl md:text-5xl font-black">{feedback.score}</p>
                   <p className="font-mono text-xs text-gray-500 mt-1">/ 100</p>
                 </div>
               )}
@@ -102,7 +102,7 @@ export default function WritingPage() {
               {feedback.overall_comment && (
                 <div className="s-card">
                   <p className="s-label">总体评价</p>
-                  <p className="font-mono text-sm leading-relaxed">
+                  <p className="font-mono text-xs md:text-sm leading-relaxed">
                     {feedback.overall_comment}
                   </p>
                 </div>
@@ -112,7 +112,7 @@ export default function WritingPage() {
               {feedback.grammar_issues && (
                 <div className="s-card">
                   <p className="s-label">语法问题</p>
-                  <p className="font-mono text-sm leading-relaxed whitespace-pre-wrap">
+                  <p className="font-mono text-xs md:text-sm leading-relaxed whitespace-pre-wrap">
                     {feedback.grammar_issues}
                   </p>
                 </div>
@@ -122,7 +122,7 @@ export default function WritingPage() {
               {feedback.expression_suggestions && (
                 <div className="s-card">
                   <p className="s-label">表达建议</p>
-                  <p className="font-mono text-sm leading-relaxed whitespace-pre-wrap">
+                  <p className="font-mono text-xs md:text-sm leading-relaxed whitespace-pre-wrap">
                     {feedback.expression_suggestions}
                   </p>
                 </div>
@@ -132,7 +132,7 @@ export default function WritingPage() {
               {feedback.structure_feedback && (
                 <div className="s-card">
                   <p className="s-label">文章结构</p>
-                  <p className="font-mono text-sm leading-relaxed whitespace-pre-wrap">
+                  <p className="font-mono text-xs md:text-sm leading-relaxed whitespace-pre-wrap">
                     {feedback.structure_feedback}
                   </p>
                 </div>
@@ -142,7 +142,7 @@ export default function WritingPage() {
               {feedback.improved_version && (
                 <div className="s-card bg-gray-50">
                   <p className="s-label">改进版本</p>
-                  <p className="font-mono text-sm leading-relaxed whitespace-pre-wrap">
+                  <p className="font-mono text-xs md:text-sm leading-relaxed whitespace-pre-wrap">
                     {feedback.improved_version}
                   </p>
                 </div>

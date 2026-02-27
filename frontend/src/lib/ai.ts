@@ -49,6 +49,27 @@ function parseJSON(text: string): any {
   return JSON.parse(cleaned);
 }
 
+// ─── 模型列表 ───
+
+export async function fetchModels(apiKey: string, baseUrl: string): Promise<{ id: string; owned_by?: string }[]> {
+  const resp = await fetch(`${baseUrl}/models`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+    },
+  });
+
+  if (!resp.ok) {
+    throw new Error(`获取模型列表失败: ${resp.status}`);
+  }
+
+  const data = await resp.json();
+  const models = (data.data || []) as { id: string; owned_by?: string }[];
+  // 按 id 字母排序
+  models.sort((a, b) => a.id.localeCompare(b.id));
+  return models;
+}
+
 // ─── 公开 API ───
 
 export async function translateText(text: string, context = ""): Promise<{ translation: string; explanation: string }> {
@@ -221,6 +242,138 @@ ${content}`;
       structure_feedback: "",
       overall_comment: "",
       improved_version: "",
+    };
+  }
+}
+
+// ─── 词汇书 ───
+
+export async function extractWordsFromText(
+  text: string
+): Promise<
+  {
+    word: string;
+    definition: string;
+    definition_en: string;
+    pos: string;
+    pronunciation: string;
+    example: string;
+  }[]
+> {
+  // 分段处理长文本
+  const maxChunkSize = 4000;
+  const chunks: string[] = [];
+  for (let i = 0; i < text.length; i += maxChunkSize) {
+    chunks.push(text.slice(i, i + maxChunkSize));
+  }
+
+  const allWords: any[] = [];
+
+  for (const chunk of chunks) {
+    const prompt = `你是一个英语词汇提取专家。从以下文本中提取所有英语单词/词组，并整理成结构化列表。
+
+要求：
+1. 提取所有有学习价值的英语单词和短语（忽略 a/the/is/are 等极常见功能词）
+2. 如果文本是词汇表格式（如每行一个单词或单词+释义），请按原格式提取
+3. 如果文本是文章/段落，请提取关键词汇
+4. 词形还原为原形（如 running → run, better → good）
+5. 每个单词提供中英释义、词性、音标和一个例句
+
+返回 JSON 数组:
+[{
+  "word": "原形单词",
+  "definition": "中文释义",
+  "definition_en": "英文释义",
+  "pos": "词性(noun/verb/adj/adv/prep/conj/phrase)",
+  "pronunciation": "音标",
+  "example": "例句"
+}]
+
+文本内容:
+${chunk}`;
+
+    const result = await chat([{ role: "user", content: prompt }], 0.3);
+    try {
+      const words = parseJSON(result);
+      if (Array.isArray(words)) {
+        allWords.push(...words);
+      }
+    } catch {
+      // 静默跳过解析失败的块
+    }
+  }
+
+  // 去重
+  const seen = new Set<string>();
+  return allWords.filter((w) => {
+    const key = (w.word || "").toLowerCase().trim();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+export async function generateArticleFromWords(
+  words: string[],
+  options?: { difficulty?: string; topic?: string }
+): Promise<{
+  title: string;
+  content: string;
+  sentences: { text_en: string; text_zh: string }[];
+  word_count: number;
+}> {
+  const difficulty = options?.difficulty || "medium";
+  const topic = options?.topic || "";
+
+  const difficultyGuide = {
+    easy: "使用简单句式，文章长度 150-250 词，适合初中水平",
+    medium: "使用中等复杂句式，文章长度 250-400 词，适合高中/大学水平",
+    hard: "使用复杂句式和高级表达，文章长度 400-600 词，适合四六级/雅思水平",
+  }[difficulty] || "使用中等复杂句式，文章长度 250-400 词";
+
+  const prompt = `你是一个专业的英语教育内容创作者。请根据以下单词列表生成一篇**真实性的非虚构类英语文章**。
+
+核心要求：
+1. **必须是非虚构类文章**（如新闻报道、科普文章、社会评论、技术介绍等）
+2. **确保文章内容的真实性和准确性**——事实、数据、观点必须基于现实
+3. **自然地融入以下单词**（不要生硬堆砌，至少使用其中 70% 的单词）
+4. ${difficultyGuide}
+5. 文章结构清晰：有标题、分段
+${topic ? `6. 文章主题/方向：${topic}` : "6. 自由选择合适的主题来融入这些词汇"}
+
+需要融入的单词列表：
+${words.join(", ")}
+
+返回 JSON 格式:
+{
+  "title": "英文标题",
+  "sentences": [
+    {"text_en": "英文句子1", "text_zh": "对应中文翻译1"},
+    {"text_en": "英文句子2", "text_zh": "对应中文翻译2"}
+  ]
+}
+
+注意：
+- sentences 按段落和句子顺序排列
+- 每个段落开头可以空一个句子来表示段落分隔
+- 中文翻译要准确自然`;
+
+  const result = await chat([{ role: "user", content: prompt }], 0.7);
+  try {
+    const parsed = parseJSON(result);
+    const content = (parsed.sentences || []).map((s: any) => s.text_en).join(" ");
+    return {
+      title: parsed.title || "AI Generated Article",
+      content,
+      sentences: parsed.sentences || [],
+      word_count: content.split(/\s+/).length,
+    };
+  } catch {
+    return {
+      title: "AI Generated Article",
+      content: result,
+      sentences: [{ text_en: result, text_zh: "" }],
+      word_count: result.split(/\s+/).length,
     };
   }
 }

@@ -100,21 +100,21 @@ function ReaderContent() {
   return (
     <div>
       {/* 页面头部 */}
-      <div className="mb-8">
+      <div className="mb-6 lg:mb-8">
         <Link
           href="/discover/"
-          className="s-btn-ghost inline-flex items-center gap-1 mb-4 -ml-4"
+          className="s-btn-ghost inline-flex items-center gap-1 mb-3 md:mb-4 -ml-4"
         >
           <ArrowLeft size={14} />
           返回
         </Link>
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
           <div className="flex-1">
             <p className="s-label">阅读器</p>
-            <h1 className="font-black text-2xl md:text-3xl leading-snug tracking-tight">
+            <h1 className="font-black text-xl md:text-2xl lg:text-3xl leading-snug tracking-tight">
               {article.title}
             </h1>
-            <div className="flex items-center gap-4 mt-3">
+            <div className="flex flex-wrap items-center gap-2 md:gap-4 mt-2 md:mt-3">
               <span className="s-tag">{difficultyLabel(article.difficulty)}</span>
               <span className="font-mono text-xs text-gray-500">
                 {article.word_count} 词
@@ -125,10 +125,10 @@ function ReaderContent() {
       </div>
 
       {/* 阅读模式切换 */}
-      <div className="flex items-center gap-2 mb-8 pb-6 border-b-2 border-black">
+      <div className="flex items-center gap-2 mb-6 lg:mb-8 pb-4 md:pb-6 border-b-2 border-black">
         <button
           onClick={() => setViewMode("en")}
-          className={`flex items-center gap-1.5 px-4 py-2 font-sans font-bold text-xs uppercase tracking-widest border-2 border-black rounded-none transition-all ${
+          className={`flex items-center gap-1.5 px-3 py-2 md:px-4 font-sans font-bold text-xs uppercase tracking-widest border-2 border-black rounded-none transition-all ${
             viewMode === "en"
               ? "bg-black text-white shadow-[4px_4px_0px_0px_rgba(255,0,110,1)]"
               : "bg-white text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5"
@@ -139,7 +139,7 @@ function ReaderContent() {
         </button>
         <button
           onClick={() => setViewMode("bilingual")}
-          className={`flex items-center gap-1.5 px-4 py-2 font-sans font-bold text-xs uppercase tracking-widest border-2 border-black rounded-none transition-all ${
+          className={`flex items-center gap-1.5 px-3 py-2 md:px-4 font-sans font-bold text-xs uppercase tracking-widest border-2 border-black rounded-none transition-all ${
             viewMode === "bilingual"
               ? "bg-black text-white shadow-[4px_4px_0px_0px_rgba(255,0,110,1)]"
               : "bg-white text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5"
@@ -152,7 +152,7 @@ function ReaderContent() {
 
       {/* 摘要 */}
       {article.summary && (
-        <div className="s-card mb-8 bg-gray-50">
+        <div className="s-card mb-6 lg:mb-8 bg-gray-50">
           <p className="s-label">摘要</p>
           <p className="font-mono text-sm md:text-base text-black leading-relaxed">
             {article.summary}

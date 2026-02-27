@@ -28,10 +28,10 @@ export default function PlanPage() {
 
   return (
     <div>
-      <div className="flex items-end justify-between mb-12">
+      <div className="flex items-end justify-between mb-8 lg:mb-12">
         <div>
           <p className="s-label">今日计划</p>
-          <h1>学习计划</h1>
+          <h1 className="text-xl md:text-2xl lg:text-3xl">学习计划</h1>
         </div>
         <button
           onClick={handleGenerate}
@@ -55,7 +55,7 @@ export default function PlanPage() {
       ) : (
         <div>
           {/* 计划信息 */}
-          <div className="flex items-center gap-6 mb-8">
+          <div className="flex flex-wrap items-center gap-4 md:gap-6 mb-6 md:mb-8">
             <span className="font-mono text-sm text-gray-500">
               目标：{" "}
               <span className="font-black text-black uppercase">
@@ -71,7 +71,7 @@ export default function PlanPage() {
           </div>
 
           {/* 任务列表 */}
-          <div className="space-y-4">
+          <div className="space-y-3 md:space-y-4">
             {plan.tasks?.map((task: any) => (
               <div
                 key={task.id}
@@ -81,7 +81,7 @@ export default function PlanPage() {
               >
                 <button
                   onClick={() => !task.is_completed && handleComplete(task.id)}
-                  className={`w-6 h-6 border-2 border-black flex items-center justify-center shrink-0 transition-all ${
+                  className={`w-8 h-8 md:w-6 md:h-6 border-2 border-black flex items-center justify-center shrink-0 transition-all ${
                     task.is_completed
                       ? "bg-black text-white"
                       : "bg-white hover:bg-gray-100"
@@ -98,9 +98,9 @@ export default function PlanPage() {
                     {task.title}
                   </p>
                 </div>
-                <div className="flex items-center gap-3 shrink-0">
+                <div className="flex items-center gap-2 md:gap-3 shrink-0">
                   <span className="s-tag">{task.task_type}</span>
-                  <span className="font-mono text-xs text-gray-500">
+                  <span className="font-mono text-xs text-gray-500 hidden sm:inline">
                     {task.duration_minutes}分钟
                   </span>
                 </div>

@@ -447,4 +447,161 @@ export const api = {
       return db.userProfile.get(profile.id!);
     },
   },
+
+  // ─── Vocab Book ───
+  vocabBook: {
+    list: async () => {
+      return db.vocabBook.orderBy("created_at").reverse().toArray();
+    },
+
+    get: async (bookId: number) => {
+      const book = await db.vocabBook.get(bookId);
+      if (!book) return null;
+      const words = await db.vocabBookWord.where("book_id").equals(bookId).toArray();
+      return { ...book, words };
+    },
+
+    create: async (data: { name: string; text: string }) => {
+      // AI 提取单词
+      const extractedWords = await ai.extractWordsFromText(data.text);
+
+      const bookId = (await db.vocabBook.add({
+        name: data.name,
+        description: `从文本中提取了 ${extractedWords.length} 个单词`,
+        word_count: extractedWords.length,
+        created_at: nowStr(),
+      })) as number;
+
+      for (const w of extractedWords) {
+        await db.vocabBookWord.add({
+          book_id: bookId,
+          word: w.word,
+          definition: w.definition || "",
+          definition_en: w.definition_en || "",
+          pos: w.pos || "",
+          pronunciation: w.pronunciation || "",
+          example: w.example || "",
+          is_added_to_vocab: false,
+        });
+      }
+
+      return api.vocabBook.get(bookId);
+    },
+
+    delete: async (bookId: number) => {
+      await db.vocabBookWord.where("book_id").equals(bookId).delete();
+      await db.vocabBook.delete(bookId);
+      return { ok: true };
+    },
+
+    addWordToVocab: async (wordId: number) => {
+      const bookWord = await db.vocabBookWord.get(wordId);
+      if (!bookWord) return null;
+
+      // 调用现有的 vocab.mark
+      const vocabItem = await api.vocab.mark({
+        word: bookWord.word,
+        definition: bookWord.definition,
+        pos: bookWord.pos,
+      });
+
+      // 标记为已添加
+      await db.vocabBookWord.update(wordId, { is_added_to_vocab: true });
+
+      return vocabItem;
+    },
+
+    addAllToVocab: async (bookId: number) => {
+      const words = await db.vocabBookWord.where("book_id").equals(bookId).toArray();
+      let added = 0;
+      for (const w of words) {
+        if (w.is_added_to_vocab) continue;
+        const existing = await db.vocabItem.where("word").equals(w.word).first();
+        if (!existing) {
+          await db.vocabItem.add({
+            word: w.word,
+            lemma: w.word,
+            pos: w.pos || "",
+            definition: w.definition || "",
+            definition_en: w.definition_en || "",
+            example_sentence: w.example || "",
+            pronunciation: w.pronunciation || "",
+            ease_factor: 2.5,
+            interval_days: 1,
+            repetitions: 0,
+            next_review_date: todayStr(),
+            is_mastered: false,
+            created_at: nowStr(),
+          });
+        }
+        await db.vocabBookWord.update(w.id!, { is_added_to_vocab: true });
+        added++;
+      }
+      return { added };
+    },
+
+    generateArticle: async (data: {
+      bookId?: number;
+      includeVocab?: boolean;
+      difficulty?: string;
+      topic?: string;
+    }) => {
+      const words: string[] = [];
+
+      // 从词汇书获取单词
+      if (data.bookId) {
+        const bookWords = await db.vocabBookWord.where("book_id").equals(data.bookId).toArray();
+        words.push(...bookWords.map((w) => w.word));
+      }
+
+      // 从生词本获取单词
+      if (data.includeVocab) {
+        const vocabWords = await db.vocabItem
+          .filter((v) => !v.is_mastered)
+          .limit(30)
+          .toArray();
+        words.push(...vocabWords.map((v) => v.word));
+      }
+
+      // 去重
+      const uniqueWords = Array.from(new Set(words.map((w) => w.toLowerCase())));
+      if (uniqueWords.length === 0) {
+        throw new Error("没有可用的单词来生成文章");
+      }
+
+      // 限制单词数量（太多 AI 难以自然融入）
+      const selectedWords = uniqueWords.slice(0, 40);
+
+      const article = await ai.generateArticleFromWords(selectedWords, {
+        difficulty: data.difficulty,
+        topic: data.topic,
+      });
+
+      // 保存为文章
+      const articleId = (await db.article.add({
+        title: article.title,
+        url: "",
+        content: article.content,
+        summary: `AI 根据 ${selectedWords.length} 个单词生成的文章`,
+        difficulty: data.difficulty || "medium",
+        category: "ai-generated",
+        word_count: article.word_count,
+        is_recommended: false,
+        is_read: false,
+        fetched_at: nowStr(),
+      })) as number;
+
+      // 保存句子
+      for (let i = 0; i < article.sentences.length; i++) {
+        await db.articleSentence.add({
+          article_id: articleId,
+          index: i,
+          text_en: article.sentences[i].text_en,
+          text_zh: article.sentences[i].text_zh || "",
+        });
+      }
+
+      return { article_id: articleId, ...article };
+    },
+  },
 };

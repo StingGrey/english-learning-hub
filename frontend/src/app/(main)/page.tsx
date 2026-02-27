@@ -13,16 +13,16 @@ export default function DashboardPage() {
   return (
     <div>
       {/* 页头 */}
-      <div className="mb-12">
+      <div className="mb-8 lg:mb-12">
         <p className="s-label">学习概览</p>
-        <h1>早上好。</h1>
+        <h1 className="text-xl md:text-2xl lg:text-3xl">早上好。</h1>
         <p className="font-mono text-sm md:text-base text-gray-500 mt-2">
           这是你今天的英语学习总览。
         </p>
       </div>
 
       {/* 数据统计 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-8 lg:mb-12">
         <StatCard
           label="已完成任务"
           value={`${stats?.tasks_done ?? 0}/${stats?.tasks_total ?? 0}`}
@@ -36,9 +36,9 @@ export default function DashboardPage() {
       </div>
 
       {/* 快捷操作 */}
-      <div className="mb-12">
+      <div className="mb-8 lg:mb-12">
         <p className="s-label mb-4">快捷操作</p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           <QuickAction href="/discover" icon={BookOpen} label="阅读文章" />
           <QuickAction href="/vocab" icon={Languages} label="复习词汇" />
           <QuickAction href="/speaking" icon={MessageCircle} label="口语练习" />
@@ -50,7 +50,7 @@ export default function DashboardPage() {
       {recommended && recommended.length > 0 && (
         <div>
           <p className="s-label mb-4">推荐阅读</p>
-          <div className="space-y-4">
+          <div className="space-y-3 md:space-y-4">
             {recommended.map((article: any) => (
               <Link
                 key={article.id}
@@ -90,7 +90,7 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
       <p className="font-sans font-bold text-xs uppercase tracking-widest text-gray-500 mb-2">
         {label}
       </p>
-      <p className="text-2xl md:text-3xl font-black">{value}</p>
+      <p className="text-xl md:text-2xl lg:text-3xl font-black">{value}</p>
     </div>
   );
 }
@@ -107,7 +107,7 @@ function QuickAction({
   return (
     <Link
       href={href}
-      className="s-card-hover flex flex-col items-center justify-center py-8 group"
+      className="s-card-hover flex flex-col items-center justify-center py-6 md:py-8 group"
     >
       <Icon
         size={24}
