@@ -1,5 +1,8 @@
 """RSS 抓取服务 —— 从预置 RSS 源获取英文文章"""
+import json
 import re
+from html import unescape
+
 import feedparser
 import httpx
 from datetime import datetime
@@ -40,13 +43,8 @@ def _fetch_source(db: Session, source: NewsSource) -> int:
             continue
 
         title = entry.get("title", "Untitled")
-        # 从 RSS 获取摘要内容
-        content = entry.get("content", [{}])[0].get("value", "") if entry.get("content") else ""
-        if not content:
-            content = entry.get("summary", entry.get("description", ""))
-
-        # 清理 HTML 标签
-        content = _strip_html(content)
+        # 优先提取网页正文，降级使用 RSS 摘要
+        content = _extract_article_content(url, entry)
         if len(content) < 100:
             continue
 
@@ -163,6 +161,131 @@ def _flesch_reading_ease(text: str) -> float:
 def _strip_html(text: str) -> str:
     """移除 HTML 标签"""
     return re.sub(r"<[^>]+>", "", text).strip()
+
+
+def _extract_article_content(url: str, entry) -> str:
+    """提取文章正文：优先网页正文，失败时回退 RSS 内容"""
+    rss_raw = entry.get("content", [{}])[0].get("value", "") if entry.get("content") else ""
+    if not rss_raw:
+        rss_raw = entry.get("summary", entry.get("description", ""))
+    rss_content = _clean_extracted_text(_strip_html(rss_raw))
+
+    page_content = _fetch_page_content(url)
+    if not page_content:
+        return rss_content
+
+    if _looks_noisy(rss_content):
+        return page_content
+
+    # 网页内容通常更完整；如果 RSS 太短，优先网页正文
+    if len(page_content.split()) > max(120, int(len(rss_content.split()) * 1.2)):
+        return page_content
+
+    return rss_content
+
+
+def _fetch_page_content(url: str) -> str:
+    """从网页抓取正文（JSON-LD articleBody / <article>）"""
+    try:
+        resp = httpx.get(url, timeout=10, follow_redirects=True, headers={
+            "User-Agent": "Mozilla/5.0 (compatible; EnglishLearningHub/1.0)",
+        })
+        resp.raise_for_status()
+    except Exception:
+        return ""
+
+    html = resp.text
+    text = _extract_from_json_ld(html)
+    if not text:
+        text = _extract_from_article_tag(html)
+    return _clean_extracted_text(text)
+
+
+def _extract_from_json_ld(html: str) -> str:
+    """从 JSON-LD 中提取 articleBody"""
+    scripts = re.findall(
+        r'<script[^>]*type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
+        html,
+        re.IGNORECASE | re.DOTALL,
+    )
+
+    for script in scripts:
+        try:
+            data = json.loads(unescape(script).strip())
+        except Exception:
+            continue
+
+        body = _find_article_body(data)
+        if body and len(body.split()) > 20:
+            return body
+    return ""
+
+
+def _find_article_body(node) -> str:
+    if isinstance(node, dict):
+        if isinstance(node.get("articleBody"), str):
+            return node["articleBody"]
+        for value in node.values():
+            found = _find_article_body(value)
+            if found:
+                return found
+    elif isinstance(node, list):
+        for item in node:
+            found = _find_article_body(item)
+            if found:
+                return found
+    return ""
+
+
+def _extract_from_article_tag(html: str) -> str:
+    """从 <article> 标签提取文本"""
+    match = re.search(r"<article[^>]*>(.*?)</article>", html, re.IGNORECASE | re.DOTALL)
+    if not match:
+        return ""
+
+    article_html = match.group(1)
+    article_html = re.sub(r"<script[^>]*>.*?</script>", " ", article_html, flags=re.IGNORECASE | re.DOTALL)
+    article_html = re.sub(r"<style[^>]*>.*?</style>", " ", article_html, flags=re.IGNORECASE | re.DOTALL)
+    article_html = re.sub(r"</p>|<br\s*/?>", "\n", article_html, flags=re.IGNORECASE)
+    return _strip_html(unescape(article_html))
+
+
+def _looks_noisy(text: str) -> bool:
+    """判断文本是否是广告/导航等噪音"""
+    if not text:
+        return True
+
+    noise_patterns = [
+        r"CNN values your feedback",
+        r"Did you encounter any technical issues",
+        r"Sign in My Account",
+        r"Close Ad Feedback",
+        r"\[[^\]]+\]\(https?://",  # markdown 链接密集
+    ]
+    return any(re.search(pattern, text, re.IGNORECASE) for pattern in noise_patterns)
+
+
+def _clean_extracted_text(text: str) -> str:
+    """清理提取内容中的链接噪音与多余空白"""
+    if not text:
+        return ""
+
+    text = unescape(text)
+    # markdown 链接 -> 文本
+    text = re.sub(r"\[([^\]]+)\]\((https?://[^)]+)\)", r"\1", text)
+    # 裸链接移除
+    text = re.sub(r"https?://\S+", "", text)
+
+    lines = []
+    for line in text.splitlines():
+        line = re.sub(r"\s+", " ", line).strip()
+        if not line:
+            continue
+        if re.search(r"^(Close Ad Feedback|Subscribe|Sign in|Settings)$", line, re.IGNORECASE):
+            continue
+        lines.append(line)
+
+    return "\n".join(lines).strip()
 
 
 def _split_sentences(text: str) -> list[str]:
