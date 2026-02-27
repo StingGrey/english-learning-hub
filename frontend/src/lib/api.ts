@@ -430,10 +430,26 @@ export const api = {
     get: async () => {
       await ensureSeed();
       const profile = await db.userProfile.toCollection().first();
-      return profile || { goal: "general", daily_minutes: 30, ai_api_key: "", ai_base_url: "https://api.openai.com/v1", ai_model: "gpt-4o-mini" };
+      return profile || {
+        goal: "general",
+        daily_minutes: 30,
+        ai_api_key: "",
+        ai_base_url: "https://api.openai.com/v1",
+        ai_model: "gpt-4o-mini",
+        ai_api_format: "openai",
+        ai_vertex_config: "",
+      };
     },
 
-    update: async (data: { goal?: string; daily_minutes?: number; ai_api_key?: string; ai_base_url?: string; ai_model?: string }) => {
+    update: async (data: {
+      goal?: string;
+      daily_minutes?: number;
+      ai_api_key?: string;
+      ai_base_url?: string;
+      ai_model?: string;
+      ai_api_format?: "openai" | "claude" | "gemini";
+      ai_vertex_config?: string;
+    }) => {
       await ensureSeed();
       const profile = await db.userProfile.toCollection().first();
       if (!profile) return;
@@ -443,6 +459,8 @@ export const api = {
       if (data.ai_api_key !== undefined) updates.ai_api_key = data.ai_api_key;
       if (data.ai_base_url !== undefined) updates.ai_base_url = data.ai_base_url;
       if (data.ai_model !== undefined) updates.ai_model = data.ai_model;
+      if (data.ai_api_format !== undefined) updates.ai_api_format = data.ai_api_format;
+      if (data.ai_vertex_config !== undefined) updates.ai_vertex_config = data.ai_vertex_config;
       await db.userProfile.update(profile.id!, updates);
       return db.userProfile.get(profile.id!);
     },

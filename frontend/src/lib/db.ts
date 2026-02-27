@@ -13,6 +13,8 @@ export interface UserProfile {
   ai_api_key: string;
   ai_base_url: string;
   ai_model: string;
+  ai_api_format?: "openai" | "claude" | "gemini";
+  ai_vertex_config?: string; // JSON 序列化的 Vertex 配置
   webdav_config?: string; // JSON 序列化的 WebDAVConfig
 }
 
@@ -214,6 +216,24 @@ class EnglishLearningDB extends Dexie {
       vocabBook: "++id",
       vocabBookWord: "++id, book_id, word",
     });
+
+    this.version(3).stores({
+      userProfile: "++id",
+      dailyPlan: "++id, plan_date",
+      planTask: "++id, plan_id",
+      newsSource: "++id, url",
+      article: "++id, source_id, url, difficulty, is_read, is_recommended",
+      articleSentence: "++id, article_id",
+      vocabItem: "++id, word, next_review_date, is_mastered",
+      vocabReview: "++id, vocab_id, reviewed_at",
+      speakingSession: "++id",
+      speakingTurn: "++id, session_id",
+      writingSubmission: "++id",
+      writingFeedback: "++id, submission_id",
+      studySession: "++id, session_type, started_at",
+      vocabBook: "++id",
+      vocabBookWord: "++id, book_id, word",
+    });
   }
 }
 
@@ -230,6 +250,8 @@ export async function seedDefaults() {
       ai_api_key: "",
       ai_base_url: "https://api.openai.com/v1",
       ai_model: "gpt-4o-mini",
+      ai_api_format: "openai",
+      ai_vertex_config: "",
     });
   }
 
