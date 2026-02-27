@@ -73,9 +73,21 @@ function parseVertexConfig(raw?: string): VertexConfig | null {
   const parsed = parseMaybeJSON<any>(raw, null);
   if (!parsed || typeof parsed !== "object") return null;
 
-  const projectId = String(parsed.project_id || "").trim();
-  const location = String(parsed.location || "").trim() || "us-central1";
-  const serviceAccountJSON = String(parsed.service_account_json || "").trim();
+  // 兼容两种输入：
+  // 1) 包装对象：{ project_id, location, service_account_json }
+  // 2) 直接粘贴 service account JSON（含 client_email/private_key）
+  const isServiceAccountObject = Boolean(parsed.client_email && parsed.private_key);
+  const wrapperServiceAccount = parsed.service_account_json;
+  const serviceAccountJSON = isServiceAccountObject
+    ? JSON.stringify(parsed)
+    : typeof wrapperServiceAccount === "string"
+      ? wrapperServiceAccount.trim()
+      : wrapperServiceAccount && typeof wrapperServiceAccount === "object"
+        ? JSON.stringify(wrapperServiceAccount)
+        : "";
+
+  const projectId = String(parsed.project_id || parsed.projectId || "").trim();
+  const location = String(parsed.location || parsed.region || "").trim() || "us-central1";
 
   if (!projectId || !serviceAccountJSON) return null;
   return {
@@ -86,21 +98,33 @@ function parseVertexConfig(raw?: string): VertexConfig | null {
   };
 }
 
+export function hasUsableVertexConfig(raw?: string): boolean {
+  const config = parseVertexConfig(raw);
+  return Boolean(config?.enabled);
+}
+
 async function getConfig(): Promise<AIConfig> {
   const profile = await db.userProfile.toCollection().first();
-  if (!profile || !profile.ai_api_key) {
-    throw new Error("请先在设置页面配置 AI API Key");
+  if (!profile) {
+    throw new Error("请先在设置页面完成 AI 配置");
   }
 
   const apiFormat = (profile.ai_api_format || "openai") as AIFormat;
   const baseUrl = profile.ai_base_url || DEFAULT_BASE_URLS[apiFormat] || DEFAULT_BASE_URLS.openai;
+  const vertexConfig = parseVertexConfig(profile.ai_vertex_config);
+  const hasApiKey = Boolean(profile.ai_api_key?.trim());
+  const canUseVertexAuth = apiFormat === "gemini" && Boolean(vertexConfig?.enabled);
+
+  if (!hasApiKey && !canUseVertexAuth) {
+    throw new Error("请先在设置页面配置 AI API Key，或为 Gemini 提供有效 Vertex JSON 鉴权");
+  }
 
   return {
-    apiKey: profile.ai_api_key,
+    apiKey: profile.ai_api_key || "",
     baseUrl,
     model: profile.ai_model || "gpt-4o-mini",
     apiFormat,
-    vertexConfig: parseVertexConfig(profile.ai_vertex_config),
+    vertexConfig,
   };
 }
 
