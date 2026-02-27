@@ -115,7 +115,10 @@ export default function SelectionPopup({
     }
   };
 
-  const popupLeft = Math.min(x - 160, (typeof window !== "undefined" ? window.innerWidth : 800) - 340);
+  const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 800;
+  const popupWidth = Math.min(320, viewportWidth - 16);
+  const popupLeft = Math.max(8, Math.min(x - popupWidth / 2, viewportWidth - popupWidth - 8));
+  const popupTop = typeof window !== "undefined" ? Math.min(y, window.innerHeight - 16) : y;
 
   return (
     <div
@@ -123,8 +126,8 @@ export default function SelectionPopup({
       className="fixed z-50 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:bg-zinc-900 dark:border-white dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]"
       style={{
         left: popupLeft,
-        top: y,
-        width: 320,
+        top: popupTop,
+        width: popupWidth,
         maxHeight: "80vh",
         overflowY: "auto",
       }}
