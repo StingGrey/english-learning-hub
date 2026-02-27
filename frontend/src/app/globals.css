@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 瑞士国际风格：理性、干净、网格感 */
+@layer base {
+  body {
+    @apply bg-swiss-bg text-swiss-black font-sans antialiased;
+    font-feature-settings: "kern" 1, "liga" 1;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-tight;
+  }
+
+  h1 { @apply text-4xl leading-tight; }
+  h2 { @apply text-2xl leading-snug; }
+  h3 { @apply text-xl; }
+
+  ::selection {
+    @apply bg-swiss-black text-swiss-white;
+  }
+}
+
+@layer components {
+  .swiss-card {
+    @apply bg-swiss-white border border-swiss-light p-6;
+  }
+
+  .swiss-btn {
+    @apply px-5 py-2.5 bg-swiss-black text-swiss-white text-sm font-medium
+           tracking-wide uppercase transition-colors
+           hover:bg-swiss-dark active:bg-swiss-gray;
+  }
+
+  .swiss-btn-outline {
+    @apply px-5 py-2.5 border border-swiss-black text-swiss-black text-sm font-medium
+           tracking-wide uppercase transition-colors
+           hover:bg-swiss-black hover:text-swiss-white;
+  }
+
+  .swiss-btn-ghost {
+    @apply px-4 py-2 text-sm text-swiss-gray hover:text-swiss-black transition-colors;
+  }
+
+  .swiss-input {
+    @apply w-full px-4 py-3 border border-swiss-light bg-swiss-white
+           text-swiss-black placeholder-swiss-gray
+           focus:outline-none focus:border-swiss-black transition-colors;
+  }
+
+  .swiss-label {
+    @apply block text-xs font-medium uppercase tracking-widest text-swiss-gray mb-2;
+  }
+
+  .swiss-divider {
+    @apply border-t border-swiss-light;
+  }
+
+  .swiss-tag {
+    @apply inline-block px-2 py-0.5 text-xs font-medium uppercase tracking-wider
+           border border-swiss-light text-swiss-gray;
+  }
+
+  .swiss-tag-accent {
+    @apply inline-block px-2 py-0.5 text-xs font-medium uppercase tracking-wider
+           bg-swiss-black text-swiss-white;
+  }
+}
