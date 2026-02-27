@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "@/lib/api";
-import { fetchModels } from "@/lib/ai";
+import { fetchModels, hasUsableVertexConfig } from "@/lib/ai";
 import { webdav, type WebDAVConfig } from "@/lib/webdav";
 import {
   Save,
@@ -85,11 +85,13 @@ export default function SettingsPage() {
   }, []);
 
   const handleFetchModels = useCallback(async () => {
-    if (!apiKey.trim()) {
-      setModelsError("请先填写 API 密钥");
+    const canUseVertexAuth = apiFormat === "gemini" && hasUsableVertexConfig(vertexConfig);
+
+    if (!apiKey.trim() && !canUseVertexAuth) {
+      setModelsError("请先填写 API 密钥，或提供有效 Vertex JSON 鉴权");
       return;
     }
-    if (!baseUrl.trim()) {
+    if (!baseUrl.trim() && !canUseVertexAuth) {
       setModelsError("请先填写 API 基础地址");
       return;
     }
