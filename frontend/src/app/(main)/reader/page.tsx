@@ -68,26 +68,40 @@ function ReaderContent() {
     }
   }, [sentences, articleId]);
 
-  const handleMouseUp = useCallback(() => {
+  const triggerSelectionPopup = useCallback(() => {
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) return;
+    if (!contentRef.current || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+    const container = range.commonAncestorContainer;
+    const isInsideContent = contentRef.current.contains(
+      container.nodeType === Node.ELEMENT_NODE ? container : container.parentElement
+    );
+    if (!isInsideContent) return;
 
     const text = selection.toString().trim();
     if (!text || text.length > 500) return;
 
-    const anchorNode = selection.anchorNode;
-    const context = anchorNode?.parentElement?.textContent || "";
+    const contextNode = range.startContainer.nodeType === Node.ELEMENT_NODE
+      ? (range.startContainer as Element)
+      : range.startContainer.parentElement;
+    const context = contextNode?.textContent || "";
 
-    const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) return;
 
     setPopup({
       text,
       context,
       x: rect.left + rect.width / 2,
-      y: rect.bottom + window.scrollY + 8,
+      y: rect.bottom + 8,
     });
   }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    window.setTimeout(triggerSelectionPopup, 80);
+  }, [triggerSelectionPopup]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -204,7 +218,8 @@ function ReaderContent() {
       {/* 文章内容 */}
       <div
         ref={contentRef}
-        onMouseUp={handleMouseUp}
+        onMouseUp={triggerSelectionPopup}
+        onTouchEnd={handleTouchEnd}
         className="reader-content"
       >
         {sentences && sentences.length > 0 ? (
