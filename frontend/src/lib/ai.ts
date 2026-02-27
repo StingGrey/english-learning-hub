@@ -52,6 +52,14 @@ type AIConfig = {
   vertexConfig: VertexConfig | null;
 };
 
+type PartialAIConfigInput = {
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+  apiFormat: AIFormat;
+  vertexConfigRaw?: string;
+};
+
 const DEFAULT_BASE_URLS: Record<AIFormat, string> = {
   openai: "https://api.openai.com/v1",
   claude: "https://api.anthropic.com/v1",
@@ -123,6 +131,26 @@ async function getConfig(): Promise<AIConfig> {
     apiKey: profile.ai_api_key || "",
     baseUrl,
     model: profile.ai_model || "gpt-4o-mini",
+    apiFormat,
+    vertexConfig,
+  };
+}
+
+function resolveConfigFromInput(input: PartialAIConfigInput): AIConfig {
+  const apiFormat = input.apiFormat;
+  const baseUrl = input.baseUrl?.trim() || DEFAULT_BASE_URLS[apiFormat] || DEFAULT_BASE_URLS.openai;
+  const vertexConfig = parseVertexConfig(input.vertexConfigRaw);
+  const hasApiKey = Boolean(input.apiKey?.trim());
+  const canUseVertexAuth = apiFormat === "gemini" && Boolean(vertexConfig?.enabled);
+
+  if (!hasApiKey && !canUseVertexAuth) {
+    throw new Error("请先配置 AI API Key，或为 Gemini 提供有效 Vertex JSON 鉴权");
+  }
+
+  return {
+    apiKey: input.apiKey || "",
+    baseUrl,
+    model: input.model?.trim() || "gpt-4o-mini",
     apiFormat,
     vertexConfig,
   };
@@ -487,6 +515,84 @@ export async function fetchModels(
 }
 
 export { chatWithTools };
+
+export async function testModelConnection(input: PartialAIConfigInput): Promise<string> {
+  const config = resolveConfigFromInput(input);
+
+  const prompt = "请回复：连接测试成功";
+
+  if (config.apiFormat === "openai") {
+    const resp = await fetch(`${config.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: config.model,
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0,
+        max_tokens: 64,
+      }),
+    });
+    if (!resp.ok) throw new Error(`连接失败: ${resp.status} ${await resp.text()}`);
+    const data = await resp.json();
+    return data?.choices?.[0]?.message?.content?.trim() || "连接成功，但未返回文本";
+  }
+
+  if (config.apiFormat === "claude") {
+    const resp = await fetch(`${config.baseUrl}/messages`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": config.apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: config.model,
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 64,
+      }),
+    });
+    if (!resp.ok) throw new Error(`连接失败: ${resp.status} ${await resp.text()}`);
+    const data = await resp.json();
+    const text = (data?.content || []).find((c: any) => c?.type === "text")?.text || "";
+    return text.trim() || "连接成功，但未返回文本";
+  }
+
+  if (config.vertexConfig?.enabled) {
+    const token = await getVertexAccessToken(config.vertexConfig);
+    const { project_id, location } = config.vertexConfig;
+    const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${project_id}/locations/${location}/publishers/google/models/${config.model}:generateContent`;
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+      }),
+    });
+    if (!resp.ok) throw new Error(`连接失败: ${resp.status} ${await resp.text()}`);
+    const data = await resp.json();
+    const text = normalizeTextFromParts(data?.candidates?.[0]?.content?.parts || []);
+    return text || "连接成功，但未返回文本";
+  }
+
+  const base = config.baseUrl.replace(/\/$/, "");
+  const resp = await fetch(`${base}/models/${config.model}:generateContent?key=${encodeURIComponent(config.apiKey)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+    }),
+  });
+  if (!resp.ok) throw new Error(`连接失败: ${resp.status} ${await resp.text()}`);
+  const data = await resp.json();
+  const text = normalizeTextFromParts(data?.candidates?.[0]?.content?.parts || []);
+  return text || "连接成功，但未返回文本";
+}
 
 // ─── 公开 API ───
 

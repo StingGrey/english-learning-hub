@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { api } from "@/lib/api";
-import { fetchModels, hasUsableVertexConfig } from "@/lib/ai";
+import { fetchModels, hasUsableVertexConfig, testModelConnection } from "@/lib/ai";
 import { webdav, type WebDAVConfig } from "@/lib/webdav";
 import {
   Save,
@@ -36,7 +36,10 @@ export default function SettingsPage() {
   const [vertexConfig, setVertexConfig] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [autoSaving, setAutoSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [testLoading, setTestLoading] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   // 模型列表相关状态
   const [models, setModels] = useState<{ id: string; owned_by?: string }[]>([]);
@@ -58,6 +61,8 @@ export default function SettingsPage() {
   const [syncMsg, setSyncMsg] = useState("");
 
   const importFileRef = useRef<HTMLInputElement>(null);
+  const hasLoadedRef = useRef(false);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -80,9 +85,45 @@ export default function SettingsPage() {
       }
 
       setLoading(false);
+      hasLoadedRef.current = true;
     }
     load();
   }, []);
+
+  const saveSettings = useCallback(async () => {
+    await api.settings.update({
+      goal,
+      daily_minutes: dailyMinutes,
+      ai_api_key: apiKey,
+      ai_base_url: baseUrl,
+      ai_model: model,
+      ai_api_format: apiFormat,
+      ai_vertex_config: vertexConfig,
+    });
+  }, [goal, dailyMinutes, apiKey, baseUrl, model, apiFormat, vertexConfig]);
+
+  useEffect(() => {
+    if (!hasLoadedRef.current) return;
+
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    setAutoSaving(true);
+    autoSaveTimerRef.current = setTimeout(async () => {
+      try {
+        await saveSettings();
+      } finally {
+        setAutoSaving(false);
+      }
+    }, 600);
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [saveSettings]);
 
   const handleFetchModels = useCallback(async () => {
     const canUseVertexAuth = apiFormat === "gemini" && hasUsableVertexConfig(vertexConfig);
@@ -128,17 +169,32 @@ export default function SettingsPage() {
   }, [apiFormat]);
 
   const handleSave = async () => {
-    await api.settings.update({
-      goal,
-      daily_minutes: dailyMinutes,
-      ai_api_key: apiKey,
-      ai_base_url: baseUrl,
-      ai_model: model,
-      ai_api_format: apiFormat,
-      ai_vertex_config: vertexConfig,
-    });
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+    await saveSettings();
+    setAutoSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleTestModel = async () => {
+    setTestLoading(true);
+    setTestResult(null);
+    try {
+      const reply = await testModelConnection({
+        apiKey: apiKey.trim(),
+        baseUrl: baseUrl.trim(),
+        model: model.trim(),
+        apiFormat,
+        vertexConfigRaw: vertexConfig,
+      });
+      setTestResult({ ok: true, message: reply });
+    } catch (err: any) {
+      setTestResult({ ok: false, message: err?.message || "连接测试失败" });
+    } finally {
+      setTestLoading(false);
+    }
   };
 
   // WebDAV 操作
@@ -377,6 +433,24 @@ export default function SettingsPage() {
                   找到 {models.length} 个模型，点击输入框选择
                 </p>
               )}
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={handleTestModel}
+                  disabled={testLoading}
+                  className="s-btn-outline flex items-center gap-1.5"
+                  title="测试当前模型是否可连接并返回回复"
+                >
+                  {testLoading ? <Loader2 size={14} className="animate-spin" /> : <Wifi size={14} />}
+                  {testLoading ? "测试中" : "测试模型连接"}
+                </button>
+                {testResult && (
+                  <p className={`font-mono text-xs mt-2 ${testResult.ok ? "text-green-600" : "text-red-600"}`}>
+                    {testResult.ok ? "连接成功：" : "连接失败："}
+                    {testResult.message}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -437,6 +511,9 @@ export default function SettingsPage() {
           <Save size={14} />
           {saved ? "已保存!" : "保存设置"}
         </button>
+        {autoSaving && (
+          <p className="font-mono text-xs text-gray-500">正在自动保存设置...</p>
+        )}
 
         {/* WebDAV 同步 */}
         <div>
