@@ -68,6 +68,24 @@ function ReaderContent() {
     }
   }, [sentences, articleId]);
 
+  const handleWordClick = useCallback((
+    e: React.MouseEvent<HTMLSpanElement>,
+    word: string,
+    context: string
+  ) => {
+    // 如果用户正在拖拽选择文本，交给 onMouseUp 处理
+    const sel = window.getSelection();
+    if (sel && !sel.isCollapsed) return;
+
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setPopup({
+      text: word,
+      context,
+      x: rect.left + rect.width / 2,
+      y: rect.bottom + window.scrollY + 8,
+    });
+  }, []);
+
   const handleMouseUp = useCallback(() => {
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) return;
@@ -90,14 +108,18 @@ function ReaderContent() {
   }, []);
 
   useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
+    const handleClose = (e: MouseEvent | TouchEvent) => {
       const target = e.target as HTMLElement;
       if (!target.closest("[data-popup]")) {
         setPopup(null);
       }
     };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("mousedown", handleClose);
+    document.addEventListener("touchstart", handleClose, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", handleClose);
+      document.removeEventListener("touchstart", handleClose);
+    };
   }, []);
 
   const difficultyLabel = (d: string) => {
@@ -211,8 +233,23 @@ function ReaderContent() {
           <div className="space-y-4">
             {sentences.map((sentence, i) => (
               <div key={i} className="group">
-                <p className="font-mono text-sm md:text-base leading-relaxed text-black dark:text-zinc-50">
-                  {sentence.text_en}
+                <p className="font-mono text-sm md:text-base leading-[1.9] text-black dark:text-zinc-50">
+                  {sentence.text_en.split(/(\s+)/).map((token, j) => {
+                    // 空白字符原样保留
+                    if (/^\s+$/.test(token)) return <span key={j}>{token}</span>;
+                    // 去除首尾标点，提取纯单词用于查词
+                    const word = token.replace(/^[^a-zA-Z'-]+|[^a-zA-Z'-]+$/g, "");
+                    if (!word) return <span key={j}>{token}</span>;
+                    return (
+                      <span
+                        key={j}
+                        className="cursor-pointer rounded-sm hover:bg-yellow-100 active:bg-yellow-200 dark:hover:bg-yellow-900/40 dark:active:bg-yellow-800/60 transition-colors px-px -mx-px select-text"
+                        onClick={(e) => handleWordClick(e, word, sentence.text_en)}
+                      >
+                        {token}
+                      </span>
+                    );
+                  })}
                 </p>
                 {viewMode === "bilingual" && sentence.text_zh && (
                   <p className="font-mono text-sm text-gray-500 mt-1 leading-relaxed dark:text-zinc-400">
