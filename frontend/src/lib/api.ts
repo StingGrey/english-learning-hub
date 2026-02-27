@@ -93,13 +93,19 @@ export const api = {
       }));
     },
 
-    articles: async (params?: { difficulty?: string; limit?: number; offset?: number }) => {
+    articles: async (params?: { difficulty?: string; category?: string; limit?: number; offset?: number }) => {
       await ensureSeed();
-      let collection = db.article.orderBy("fetched_at").reverse();
-      let articles = await collection.toArray();
+      let articles = await db.article.toArray();
+
+      // 按 fetched_at 降序排序（最新的在前）
+      articles.sort((a, b) => (b.fetched_at > a.fetched_at ? 1 : -1));
 
       if (params?.difficulty) {
         articles = articles.filter((a) => a.difficulty === params.difficulty);
+      }
+
+      if (params?.category) {
+        articles = articles.filter((a) => a.category === params.category);
       }
 
       const offset = params?.offset || 0;
@@ -113,6 +119,17 @@ export const api = {
         ...a,
         source_name: a.source_id ? sourceMap[a.source_id] || null : null,
       }));
+    },
+
+    // 获取所有文章的分类列表
+    categories: async () => {
+      await ensureSeed();
+      const articles = await db.article.toArray();
+      const cats = new Set<string>();
+      for (const a of articles) {
+        if (a.category) cats.add(a.category);
+      }
+      return Array.from(cats).sort();
     },
 
     getArticle: async (id: number) => {
@@ -135,6 +152,22 @@ export const api = {
           text_zh: s.text_zh || "",
         })),
       };
+    },
+
+    // 保存文章句子翻译到 IndexedDB（供双语模式持久化）
+    saveTranslations: async (articleId: number, translations: string[]) => {
+      const sentences = await db.articleSentence
+        .where("article_id")
+        .equals(articleId)
+        .sortBy("index");
+
+      for (const sentence of sentences) {
+        const translation = translations[sentence.index];
+        if (translation) {
+          await db.articleSentence.update(sentence.id!, { text_zh: translation });
+        }
+      }
+      return { ok: true };
     },
   },
 
@@ -162,6 +195,8 @@ export const api = {
       lemma?: string;
       pos?: string;
       definition?: string;
+      definition_en?: string;
+      pronunciation?: string;
       example_sentence?: string;
       article_id?: number;
     }) => {
@@ -184,10 +219,10 @@ export const api = {
         lemma: data.lemma || wordInfo.lemma || data.word,
         pos: data.pos || wordInfo.pos || "",
         definition: data.definition || wordInfo.definition || "",
-        definition_en: wordInfo.definition_en || "",
+        definition_en: data.definition_en || wordInfo.definition_en || "",
         example_sentence: data.example_sentence,
         article_id: data.article_id,
-        pronunciation: wordInfo.pronunciation || "",
+        pronunciation: data.pronunciation || wordInfo.pronunciation || "",
         ease_factor: 2.5,
         interval_days: 1,
         repetitions: 0,
@@ -438,6 +473,8 @@ export const api = {
         ai_model: "gpt-4o-mini",
         ai_api_format: "openai",
         ai_vertex_config: "",
+        ai_model_translation: "",
+        ai_model_word: "",
       };
     },
 
@@ -449,6 +486,8 @@ export const api = {
       ai_model?: string;
       ai_api_format?: "openai" | "claude" | "gemini";
       ai_vertex_config?: string;
+      ai_model_translation?: string;
+      ai_model_word?: string;
     }) => {
       await ensureSeed();
       const profile = await db.userProfile.toCollection().first();
@@ -461,6 +500,8 @@ export const api = {
       if (data.ai_model !== undefined) updates.ai_model = data.ai_model;
       if (data.ai_api_format !== undefined) updates.ai_api_format = data.ai_api_format;
       if (data.ai_vertex_config !== undefined) updates.ai_vertex_config = data.ai_vertex_config;
+      if (data.ai_model_translation !== undefined) updates.ai_model_translation = data.ai_model_translation;
+      if (data.ai_model_word !== undefined) updates.ai_model_word = data.ai_model_word;
       await db.userProfile.update(profile.id!, updates);
       return db.userProfile.get(profile.id!);
     },

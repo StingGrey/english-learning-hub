@@ -118,7 +118,7 @@ export function hasUsableVertexConfig(raw?: string): boolean {
   return Boolean(config?.enabled);
 }
 
-async function getConfig(): Promise<AIConfig> {
+async function getConfig(purpose?: "word" | "translation"): Promise<AIConfig> {
   const profile = await db.userProfile.toCollection().first();
   if (!profile) {
     throw new Error("请先在设置页面完成 AI 配置");
@@ -134,10 +134,17 @@ async function getConfig(): Promise<AIConfig> {
     throw new Error("请先在设置页面配置 AI API Key，或为 Gemini 提供有效 Vertex JSON 鉴权");
   }
 
+  let model = profile.ai_model || "gpt-4o-mini";
+  if (purpose === "word" && (profile as any).ai_model_word?.trim()) {
+    model = (profile as any).ai_model_word.trim();
+  } else if (purpose === "translation" && (profile as any).ai_model_translation?.trim()) {
+    model = (profile as any).ai_model_translation.trim();
+  }
+
   return {
     apiKey: profile.ai_api_key || "",
     baseUrl,
-    model: profile.ai_model || "gpt-4o-mini",
+    model,
     apiFormat,
     vertexConfig,
   };
@@ -337,9 +344,10 @@ function normalizeTextFromParts(parts: any[] = []): string {
 async function chatWithTools(
   messages: ChatMessage[],
   temperature = 0.7,
-  tools?: ToolDefinition[]
+  tools?: ToolDefinition[],
+  purpose?: "word" | "translation"
 ): Promise<ChatResult> {
-  const config = await getConfig();
+  const config = await getConfig(purpose);
 
   if (config.apiFormat === "openai") {
     const resp = await fetch(`${config.baseUrl}/chat/completions`, {
@@ -524,8 +532,8 @@ async function chatWithTools(
   return { text, toolCalls };
 }
 
-async function chat(messages: ChatMessage[], temperature = 0.7): Promise<string> {
-  const result = await chatWithTools(messages, temperature);
+async function chat(messages: ChatMessage[], temperature = 0.7, purpose?: "word" | "translation"): Promise<string> {
+  const result = await chatWithTools(messages, temperature, undefined, purpose);
   return result.text;
 }
 
@@ -670,7 +678,7 @@ export async function translateText(text: string, context = ""): Promise<{ trans
 上下文: ${context}
 待翻译文本: ${text}`;
 
-  const result = await chat([{ role: "user", content: prompt }], 0.3);
+  const result = await chat([{ role: "user", content: prompt }], 0.3, "translation");
   try {
     return parseJSON(result);
   } catch {
@@ -696,7 +704,7 @@ export async function translateSentences(sentences: string[]): Promise<string[]>
 
 ${sentences.map((s, i) => `${i + 1}. ${s}`).join("\n")}`;
 
-  const result = await chat([{ role: "user", content: prompt }], 0.3);
+  const result = await chat([{ role: "user", content: prompt }], 0.3, "translation");
   const translations = result
     .trim()
     .split("\n")
@@ -730,7 +738,7 @@ export async function getWordDefinition(
 单词: ${word}
 来源句子: ${sentence}`;
 
-  const result = await chat([{ role: "user", content: prompt }], 0.3);
+  const result = await chat([{ role: "user", content: prompt }], 0.3, "word");
   try {
     return parseJSON(result);
   } catch {

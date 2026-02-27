@@ -33,6 +33,8 @@ export default function SettingsPage() {
   const [apiKey, setApiKey] = useState("");
   const [baseUrl, setBaseUrl] = useState("https://api.openai.com/v1");
   const [model, setModel] = useState("gpt-4o-mini");
+  const [modelTranslation, setModelTranslation] = useState("");
+  const [modelWord, setModelWord] = useState("");
   const [vertexConfig, setVertexConfig] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -47,6 +49,10 @@ export default function SettingsPage() {
   const [modelsError, setModelsError] = useState("");
   const [showModelDropdown, setShowModelDropdown] = useState(false);
   const [modelFilter, setModelFilter] = useState("");
+  const [showTranslationDropdown, setShowTranslationDropdown] = useState(false);
+  const [translationFilter, setTranslationFilter] = useState("");
+  const [showWordDropdown, setShowWordDropdown] = useState(false);
+  const [wordFilter, setWordFilter] = useState("");
 
   // WebDAV 相关状态
   const [davUrl, setDavUrl] = useState("");
@@ -73,6 +79,8 @@ export default function SettingsPage() {
       setApiFormat(data.ai_api_format || "openai");
       setBaseUrl(data.ai_base_url || "https://api.openai.com/v1");
       setModel(data.ai_model || "gpt-4o-mini");
+      setModelTranslation(data.ai_model_translation || "");
+      setModelWord(data.ai_model_word || "");
       setVertexConfig(data.ai_vertex_config || "");
 
       // 加载 WebDAV 配置
@@ -99,8 +107,10 @@ export default function SettingsPage() {
       ai_model: model,
       ai_api_format: apiFormat,
       ai_vertex_config: vertexConfig,
+      ai_model_translation: modelTranslation,
+      ai_model_word: modelWord,
     });
-  }, [goal, dailyMinutes, apiKey, baseUrl, model, apiFormat, vertexConfig]);
+  }, [goal, dailyMinutes, apiKey, baseUrl, model, apiFormat, vertexConfig, modelTranslation, modelWord]);
 
   useEffect(() => {
     if (!hasLoadedRef.current) return;
@@ -159,6 +169,8 @@ export default function SettingsPage() {
     setModels([]);
     setModelsError("");
     setShowModelDropdown(false);
+    setShowTranslationDropdown(false);
+    setShowWordDropdown(false);
   }, [apiKey, baseUrl, apiFormat, vertexConfig]);
 
   useEffect(() => {
@@ -282,6 +294,14 @@ export default function SettingsPage() {
 
   const filteredModels = modelFilter
     ? models.filter((m) => m.id.toLowerCase().includes(modelFilter.toLowerCase()))
+    : models;
+
+  const filteredTranslationModels = translationFilter
+    ? models.filter((m) => m.id.toLowerCase().includes(translationFilter.toLowerCase()))
+    : models;
+
+  const filteredWordModels = wordFilter
+    ? models.filter((m) => m.id.toLowerCase().includes(wordFilter.toLowerCase()))
     : models;
 
   if (loading) return <p className="font-mono text-sm text-gray-500">加载中...</p>;
@@ -449,6 +469,111 @@ export default function SettingsPage() {
                     {testResult.ok ? "连接成功：" : "连接失败："}
                     {testResult.message}
                   </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 专用模型配置 */}
+        <div>
+          <h2 className="font-sans font-bold text-sm uppercase tracking-wider mb-4 pb-2 border-b-2 border-black dark:border-white">
+            专用模型（可选）
+          </h2>
+          <p className="font-mono text-xs text-gray-500 mb-4">
+            为翻译和单词讲解分别指定不同的模型。留空则使用上方主模型。先点击"获取模型"后可下拉选择。
+          </p>
+          <div className="space-y-4">
+            {/* 翻译专用模型 */}
+            <div>
+              <label className="s-label">翻译模型</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={modelTranslation}
+                  onChange={(e) => {
+                    setModelTranslation(e.target.value);
+                    if (models.length > 0) {
+                      setTranslationFilter(e.target.value);
+                      setShowTranslationDropdown(true);
+                    }
+                  }}
+                  onFocus={() => {
+                    if (models.length > 0) {
+                      setShowTranslationDropdown(true);
+                      setTranslationFilter("");
+                    }
+                  }}
+                  placeholder={`留空则使用主模型 (${model || "gpt-4o-mini"})`}
+                  className="s-input"
+                />
+                {showTranslationDropdown && filteredTranslationModels.length > 0 && (
+                  <div className="absolute z-50 left-0 right-0 top-full mt-1 border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] max-h-48 overflow-y-auto dark:border-white dark:bg-zinc-900 dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]">
+                    <button
+                      type="button"
+                      onClick={() => { setModelTranslation(""); setShowTranslationDropdown(false); }}
+                      className="w-full text-left px-3 py-2 font-mono text-xs text-gray-400 hover:bg-black hover:text-white transition-colors italic dark:hover:bg-white dark:hover:text-black"
+                    >
+                      — 使用主模型 —
+                    </button>
+                    {filteredTranslationModels.map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => { setModelTranslation(m.id); setShowTranslationDropdown(false); setTranslationFilter(""); }}
+                        className={`w-full text-left px-3 py-2 font-mono text-xs hover:bg-black hover:text-white transition-colors dark:hover:bg-white dark:hover:text-black ${modelTranslation === m.id ? "bg-gray-100 font-bold dark:bg-zinc-700" : ""}`}
+                      >
+                        {m.id}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 单词讲解专用模型 */}
+            <div>
+              <label className="s-label">单词讲解模型</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={modelWord}
+                  onChange={(e) => {
+                    setModelWord(e.target.value);
+                    if (models.length > 0) {
+                      setWordFilter(e.target.value);
+                      setShowWordDropdown(true);
+                    }
+                  }}
+                  onFocus={() => {
+                    if (models.length > 0) {
+                      setShowWordDropdown(true);
+                      setWordFilter("");
+                    }
+                  }}
+                  placeholder={`留空则使用主模型 (${model || "gpt-4o-mini"})`}
+                  className="s-input"
+                />
+                {showWordDropdown && filteredWordModels.length > 0 && (
+                  <div className="absolute z-50 left-0 right-0 top-full mt-1 border-2 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] max-h-48 overflow-y-auto dark:border-white dark:bg-zinc-900 dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,1)]">
+                    <button
+                      type="button"
+                      onClick={() => { setModelWord(""); setShowWordDropdown(false); }}
+                      className="w-full text-left px-3 py-2 font-mono text-xs text-gray-400 hover:bg-black hover:text-white transition-colors italic dark:hover:bg-white dark:hover:text-black"
+                    >
+                      — 使用主模型 —
+                    </button>
+                    {filteredWordModels.map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => { setModelWord(m.id); setShowWordDropdown(false); setWordFilter(""); }}
+                        className={`w-full text-left px-3 py-2 font-mono text-xs hover:bg-black hover:text-white transition-colors dark:hover:bg-white dark:hover:text-black ${modelWord === m.id ? "bg-gray-100 font-bold dark:bg-zinc-700" : ""}`}
+                      >
+                        {m.id}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
             </div>
@@ -661,10 +786,14 @@ export default function SettingsPage() {
       </div>
 
       {/* 点击外部关闭下拉 */}
-      {showModelDropdown && (
+      {(showModelDropdown || showTranslationDropdown || showWordDropdown) && (
         <div
           className="fixed inset-0 z-40"
-          onClick={() => setShowModelDropdown(false)}
+          onClick={() => {
+            setShowModelDropdown(false);
+            setShowTranslationDropdown(false);
+            setShowWordDropdown(false);
+          }}
         />
       )}
     </div>

@@ -15,6 +15,8 @@ export interface UserProfile {
   ai_model: string;
   ai_api_format?: "openai" | "claude" | "gemini";
   ai_vertex_config?: string; // JSON 序列化的 Vertex 配置
+  ai_model_translation?: string; // 翻译专用模型（可选，留空则使用主模型）
+  ai_model_word?: string; // 单词讲解专用模型（可选，留空则使用主模型）
   webdav_config?: string; // JSON 序列化的 WebDAVConfig
 }
 
@@ -234,6 +236,45 @@ class EnglishLearningDB extends Dexie {
       vocabBook: "++id",
       vocabBookWord: "++id, book_id, word",
     });
+
+    // v4: 增加 fetched_at 索引（修复文章列表排序）；为新闻源添加迁移
+    this.version(4).stores({
+      userProfile: "++id",
+      dailyPlan: "++id, plan_date",
+      planTask: "++id, plan_id",
+      newsSource: "++id, url",
+      article: "++id, source_id, url, difficulty, is_read, is_recommended, fetched_at",
+      articleSentence: "++id, article_id",
+      vocabItem: "++id, word, next_review_date, is_mastered",
+      vocabReview: "++id, vocab_id, reviewed_at",
+      speakingSession: "++id",
+      speakingTurn: "++id, session_id",
+      writingSubmission: "++id",
+      writingFeedback: "++id, submission_id",
+      studySession: "++id, session_type, started_at",
+      vocabBook: "++id",
+      vocabBookWord: "++id, book_id, word",
+    }).upgrade(async (tx) => {
+      // 为已有用户添加新闻源
+      const existingUrls = await tx.table("newsSource").toCollection().primaryKeys();
+      if (existingUrls.length > 0) {
+        const allSources = await tx.table("newsSource").toArray();
+        const existingSourceUrls = new Set(allSources.map((s: NewsSource) => s.url));
+        const newSources = [
+          { name: "AP News", url: "https://feeds.apnews.com/rss/apf-topnews", category: "world", is_active: true },
+          { name: "CNN", url: "http://rss.cnn.com/rss/cnn_topstories.rss", category: "world", is_active: true },
+          { name: "ABC News", url: "https://feeds.abcnews.com/abcnews/topstories", category: "world", is_active: true },
+          { name: "Al Jazeera English", url: "https://www.aljazeera.com/xml/rss/all.xml", category: "world", is_active: true },
+          { name: "Scientific American", url: "https://www.scientificamerican.com/feed/", category: "science", is_active: true },
+          { name: "Time Magazine", url: "https://feeds.feedburner.com/time/topstories", category: "general", is_active: true },
+        ];
+        for (const src of newSources) {
+          if (!existingSourceUrls.has(src.url)) {
+            await tx.table("newsSource").add(src);
+          }
+        }
+      }
+    });
   }
 }
 
@@ -252,6 +293,8 @@ export async function seedDefaults() {
       ai_model: "gpt-4o-mini",
       ai_api_format: "openai",
       ai_vertex_config: "",
+      ai_model_translation: "",
+      ai_model_word: "",
     });
   }
 
@@ -263,6 +306,12 @@ export async function seedDefaults() {
       { name: "NPR", url: "https://feeds.npr.org/1001/rss.xml", category: "general", is_active: true },
       { name: "The Guardian", url: "https://www.theguardian.com/world/rss", category: "world", is_active: true },
       { name: "VOA News", url: "https://www.voanews.com/api/zq$omekvi_", category: "world", is_active: true },
+      { name: "AP News", url: "https://feeds.apnews.com/rss/apf-topnews", category: "world", is_active: true },
+      { name: "CNN", url: "http://rss.cnn.com/rss/cnn_topstories.rss", category: "world", is_active: true },
+      { name: "ABC News", url: "https://feeds.abcnews.com/abcnews/topstories", category: "world", is_active: true },
+      { name: "Al Jazeera English", url: "https://www.aljazeera.com/xml/rss/all.xml", category: "world", is_active: true },
+      { name: "Scientific American", url: "https://www.scientificamerican.com/feed/", category: "science", is_active: true },
+      { name: "Time Magazine", url: "https://feeds.feedburner.com/time/topstories", category: "general", is_active: true },
     ]);
   }
 }
