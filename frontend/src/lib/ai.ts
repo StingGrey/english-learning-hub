@@ -44,6 +44,12 @@ type VertexConfig = {
   service_account_json: string;
 };
 
+type VertexRequestConfig = {
+  token: string;
+  projectId: string;
+  locations: string[];
+};
+
 type AIConfig = {
   apiKey: string;
   baseUrl: string;
@@ -95,7 +101,8 @@ function parseVertexConfig(raw?: string): VertexConfig | null {
         : "";
 
   const projectId = String(parsed.project_id || parsed.projectId || "").trim();
-  const location = String(parsed.location || parsed.region || "").trim() || "us-central1";
+  // Vertex Gemini 官方推荐优先使用 global location，区域 location 可能会导致 404 model not found
+  const location = String(parsed.location || parsed.region || "").trim() || "global";
 
   if (!projectId || !serviceAccountJSON) return null;
   return {
@@ -259,6 +266,59 @@ async function getVertexAccessToken(vertexConfig: VertexConfig): Promise<string>
   return accessToken;
 }
 
+async function getVertexRequestConfig(vertexConfig: VertexConfig): Promise<VertexRequestConfig> {
+  const token = await getVertexAccessToken(vertexConfig);
+  const primaryLocation = vertexConfig.location?.trim() || "global";
+  const locations = Array.from(new Set([primaryLocation, "global"]));
+
+  return {
+    token,
+    projectId: vertexConfig.project_id,
+    locations,
+  };
+}
+
+function isVertexModelNotFound(status: number, text: string): boolean {
+  if (status !== 404) return false;
+  return /not[_\s-]?found|publisher model/i.test(text);
+}
+
+async function fetchVertexWithFallback(
+  req: VertexRequestConfig,
+  pathByLocation: (location: string) => string,
+  init?: RequestInit
+): Promise<Response> {
+  let lastResp: Response | null = null;
+
+  for (const location of req.locations) {
+    const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${req.projectId}/locations/${location}${pathByLocation(location)}`;
+    const resp = await fetch(url, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${req.token}`,
+        ...(init?.headers || {}),
+      },
+    });
+
+    if (resp.ok) return resp;
+
+    const errText = await resp.text();
+    const shouldRetry = location !== "global" && isVertexModelNotFound(resp.status, errText);
+    if (!shouldRetry) {
+      throw new Error(`Vertex API Error ${resp.status}: ${errText}`);
+    }
+
+    lastResp = new Response(errText, { status: resp.status, statusText: resp.statusText });
+  }
+
+  if (lastResp) {
+    throw new Error(`Vertex API Error ${lastResp.status}: ${await lastResp.text()}`);
+  }
+
+  throw new Error("Vertex API Error: 未发起请求");
+}
+
 function splitSystemMessage(messages: ChatMessage[]) {
   const systemMessages = messages.filter((m) => m.role === "system").map((m) => m.content);
   const system = systemMessages.join("\n\n").trim();
@@ -416,10 +476,27 @@ async function chatWithTools(
   const headers: Record<string, string> = { "Content-Type": "application/json" };
 
   if (config.vertexConfig?.enabled) {
-    const accessToken = await getVertexAccessToken(config.vertexConfig);
-    const { project_id, location } = config.vertexConfig;
-    url = `https://${location}-aiplatform.googleapis.com/v1/projects/${project_id}/locations/${location}/publishers/google/models/${config.model}:generateContent`;
-    headers.Authorization = `Bearer ${accessToken}`;
+    const req = await getVertexRequestConfig(config.vertexConfig);
+    const resp = await fetchVertexWithFallback(
+      req,
+      (location) => `/publishers/google/models/${config.model}:generateContent`,
+      {
+        method: "POST",
+        body: JSON.stringify(geminiBody),
+      }
+    );
+    const data = await resp.json();
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    const text = normalizeTextFromParts(parts);
+    const toolCalls: ToolCall[] = parts
+      .filter((p: any) => p.functionCall)
+      .map((p: any, idx: number) => ({
+        id: p.functionCall.id || `gemini-tool-${idx}`,
+        name: p.functionCall.name || "",
+        arguments: JSON.stringify(p.functionCall.args || {}),
+      }));
+
+    return { text, toolCalls };
   } else {
     const base = config.baseUrl.replace(/\/$/, "");
     url = `${base}/models/${config.model}:generateContent?key=${encodeURIComponent(config.apiKey)}`;
@@ -431,9 +508,7 @@ async function chatWithTools(
     body: JSON.stringify(geminiBody),
   });
 
-  if (!resp.ok) {
-    throw new Error(`Gemini API Error ${resp.status}: ${await resp.text()}`);
-  }
+  if (!resp.ok) throw new Error(`Gemini API Error ${resp.status}: ${await resp.text()}`);
 
   const data = await resp.json();
   const parts = data.candidates?.[0]?.content?.parts || [];
@@ -491,13 +566,8 @@ export async function fetchModels(
 
   const vertexConfig = parseVertexConfig(vertexConfigRaw);
   if (vertexConfig?.enabled) {
-    const token = await getVertexAccessToken(vertexConfig);
-    const { project_id, location } = vertexConfig;
-    const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${project_id}/locations/${location}/publishers/google/models`;
-    const resp = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!resp.ok) throw new Error(`获取 Vertex Gemini 模型失败: ${resp.status}`);
+    const req = await getVertexRequestConfig(vertexConfig);
+    const resp = await fetchVertexWithFallback(req, () => "/publishers/google/models", { method: "GET" });
     const data = await resp.json();
     const models = (data.publisherModels || []).map((m: any) => ({
       id: (m.name || "").split("/").pop() || m.versionId || "",
@@ -561,20 +631,17 @@ export async function testModelConnection(input: PartialAIConfigInput): Promise<
   }
 
   if (config.vertexConfig?.enabled) {
-    const token = await getVertexAccessToken(config.vertexConfig);
-    const { project_id, location } = config.vertexConfig;
-    const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${project_id}/locations/${location}/publishers/google/models/${config.model}:generateContent`;
-    const resp = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-      }),
-    });
-    if (!resp.ok) throw new Error(`连接失败: ${resp.status} ${await resp.text()}`);
+    const req = await getVertexRequestConfig(config.vertexConfig);
+    const resp = await fetchVertexWithFallback(
+      req,
+      () => `/publishers/google/models/${config.model}:generateContent`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+        }),
+      }
+    );
     const data = await resp.json();
     const text = normalizeTextFromParts(data?.candidates?.[0]?.content?.parts || []);
     return text || "连接成功，但未返回文本";
