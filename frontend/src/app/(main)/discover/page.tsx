@@ -12,6 +12,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   science: "科学",
   technology: "科技",
   business: "商业",
+  topic: "专题",
   "ai-generated": "AI生成",
 };
 
@@ -25,14 +26,15 @@ export default function DiscoverPage() {
   const [fetchMsg, setFetchMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [filter, setFilter] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [topic, setTopic] = useState("");
 
   const handleFetch = async () => {
     setFetching(true);
     setFetchMsg(null);
     try {
-      const result = await api.content.fetch();
+      const result = await api.content.fetch({ topic: topic.trim() || undefined });
       await refetch();
-      setFetchMsg({ text: `获取到 ${result.new_articles} 篇新文章`, ok: true });
+      setFetchMsg({ text: `获取到 ${result.new_articles} 篇新文章${topic.trim() ? `（主题：${topic.trim()}）` : ""}`, ok: true });
       setTimeout(() => setFetchMsg(null), 3000);
     } catch (e: any) {
       setFetchMsg({ text: e?.message || "获取失败，请检查网络", ok: false });
@@ -86,6 +88,17 @@ export default function DiscoverPage() {
             </p>
           )}
         </div>
+      </div>
+
+      {/* 抓取主题 */}
+      <div className="mb-4 md:mb-6">
+        <label className="s-label">抓取主题（可选）</label>
+        <input
+          value={topic}
+          onChange={(e) => setTopic(e.target.value)}
+          placeholder="例如：AI, climate change, finance"
+          className="w-full md:max-w-md mt-2 px-3 py-2 font-mono text-sm border-2 border-black rounded-none bg-white text-black dark:bg-zinc-950 dark:text-white dark:border-white"
+        />
       </div>
 
       {/* 难度筛选 */}

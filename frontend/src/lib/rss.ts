@@ -2,7 +2,7 @@
  * 客户端 RSS 抓取服务
  * 通过 CORS 代理获取 RSS 源并解析
  */
-import { db, nowStr, type Article, type ArticleSentence } from "./db";
+import { db, nowStr, type Article } from "./db";
 
 // 多个 CORS 代理备选（如果一个挂了自动切换）
 const CORS_PROXIES = [
@@ -20,6 +20,25 @@ async function fetchWithProxy(url: string): Promise<string> {
     }
   }
   throw new Error(`Failed to fetch: ${url}`);
+}
+
+async function fetchReadableArticle(url: string): Promise<string> {
+  const mirrorUrl = `https://r.jina.ai/http://${url.replace(/^https?:\/\//, "")}`;
+  const resp = await fetch(mirrorUrl, { signal: AbortSignal.timeout(15000) });
+  if (!resp.ok) {
+    throw new Error(`Failed to fetch readable article: ${url}`);
+  }
+
+  const text = await resp.text();
+  // r.jina.ai 返回 markdown，移除前置元信息并做基础清理
+  const body = text
+    .replace(/^Title:\s.*$/m, "")
+    .replace(/^URL Source:\s.*$/m, "")
+    .replace(/^Markdown Content:\s*/m, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return body;
 }
 
 /** 解析 RSS XML 为文章列表 */
@@ -55,8 +74,69 @@ function stripHTML(html: string): string {
 /** 拆分句子 */
 function splitSentences(text: string): string[] {
   return text
-    .split(/(?<=[.!?])\s+(?=[A-Z])/)
+    .replace(/\s+/g, " ")
+    .split(/(?<=[.!?])\s+(?=["'A-Z])/)
     .filter((s) => s.trim().length > 10);
+}
+
+function matchesTopic(item: { title: string; description: string }, topic?: string): boolean {
+  if (!topic?.trim()) return true;
+  const keyword = topic.trim().toLowerCase();
+  const text = `${item.title} ${item.description}`.toLowerCase();
+  return text.includes(keyword);
+}
+
+async function upsertArticleFromItem(
+  source: { id?: number; category: string },
+  item: { title: string; link: string; description: string; pubDate?: string }
+): Promise<boolean> {
+  const existing = await db.article.where("url").equals(item.link).first();
+  if (existing) return false;
+
+  let content = stripHTML(item.description);
+  // RSS 描述通常只有一两句，优先抓取正文
+  if (content.length < 400) {
+    try {
+      const fullText = await fetchReadableArticle(item.link);
+      if (fullText.length > content.length) {
+        content = fullText;
+      }
+    } catch {
+      // 回退到 RSS 描述
+    }
+  }
+
+  if (content.length < 80) return false;
+
+  const wordCount = content.split(/\s+/).length;
+  const readability = fleschReadingEase(content);
+  const difficulty = scoreToDifficulty(readability);
+  const sentences = splitSentences(content);
+
+  const articleId = await db.article.add({
+    source_id: source.id,
+    title: item.title,
+    url: item.link,
+    content,
+    difficulty,
+    category: source.category,
+    word_count: wordCount,
+    readability_score: readability,
+    is_recommended: false,
+    is_read: false,
+    published_at: item.pubDate ? new Date(item.pubDate).toISOString() : undefined,
+    fetched_at: nowStr(),
+  });
+
+  for (let i = 0; i < sentences.length; i++) {
+    await db.articleSentence.add({
+      article_id: articleId as number,
+      index: i,
+      text_en: sentences[i].trim(),
+    });
+  }
+
+  return true;
 }
 
 /** 简易 Flesch Reading Ease */
@@ -92,7 +172,7 @@ function scoreToDifficulty(score: number): "easy" | "medium" | "hard" {
 // ─── 公开 API ───
 
 /** 抓取所有活跃 RSS 源 */
-export async function fetchAllSources(): Promise<number> {
+export async function fetchAllSources(topic?: string): Promise<number> {
   const sources = await db.newsSource.filter((s) => s.is_active).toArray();
   let totalNew = 0;
 
@@ -102,47 +182,31 @@ export async function fetchAllSources(): Promise<number> {
       const items = parseRSS(xml);
 
       for (const item of items.slice(0, 15)) {
-        // 去重
-        const existing = await db.article.where("url").equals(item.link).first();
-        if (existing) continue;
-
-        const content = stripHTML(item.description);
-        if (content.length < 80) continue;
-
-        const wordCount = content.split(/\s+/).length;
-        const readability = fleschReadingEase(content);
-        const difficulty = scoreToDifficulty(readability);
-        const sentences = splitSentences(content);
-
-        const articleId = await db.article.add({
-          source_id: source.id,
-          title: item.title,
-          url: item.link,
-          content,
-          difficulty,
-          category: source.category,
-          word_count: wordCount,
-          readability_score: readability,
-          is_recommended: false,
-          is_read: false,
-          published_at: item.pubDate ? new Date(item.pubDate).toISOString() : undefined,
-          fetched_at: nowStr(),
-        });
-
-        for (let i = 0; i < sentences.length; i++) {
-          await db.articleSentence.add({
-            article_id: articleId as number,
-            index: i,
-            text_en: sentences[i].trim(),
-          });
-        }
-
-        totalNew++;
+        if (!matchesTopic(item, topic)) continue;
+        const added = await upsertArticleFromItem(source, item);
+        if (added) totalNew++;
       }
 
       await db.newsSource.update(source.id!, { last_fetched: nowStr() });
     } catch (e) {
       console.warn(`[RSS] Failed to fetch ${source.name}:`, e);
+    }
+  }
+
+  if (topic?.trim()) {
+    try {
+      const q = encodeURIComponent(`${topic} when:7d`);
+      const googleRss = `https://news.google.com/rss/search?q=${q}&hl=en-US&gl=US&ceid=US:en`;
+      const xml = await fetchWithProxy(googleRss);
+      const items = parseRSS(xml);
+
+      for (const item of items.slice(0, 20)) {
+        if (!matchesTopic(item, topic)) continue;
+        const added = await upsertArticleFromItem({ category: "topic" }, item);
+        if (added) totalNew++;
+      }
+    } catch (e) {
+      console.warn(`[RSS] Failed to fetch topic feed ${topic}:`, e);
     }
   }
 
