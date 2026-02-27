@@ -18,7 +18,7 @@ export default function WritingPage() {
       const result = await api.writing.evaluate({ title, content });
       setFeedback(result);
     } catch {
-      setFeedback({ overall_comment: "Evaluation failed. Please try again." });
+      setFeedback({ overall_comment: "批改失败，请重试。" });
     } finally {
       setLoading(false);
     }
@@ -29,120 +29,120 @@ export default function WritingPage() {
   return (
     <div>
       <div className="mb-12">
-        <p className="swiss-label">Writing</p>
-        <h1>Essay Correction</h1>
+        <p className="s-label">写作批改</p>
+        <h1 className="font-black">英文作文批改</h1>
       </div>
 
-      <div className="grid grid-cols-2 gap-8">
-        {/* Input Panel */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* 输入面板 */}
         <div>
           <div className="mb-4">
-            <label className="swiss-label">Title (Optional)</label>
+            <label className="s-label">标题（选填）</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Essay title..."
-              className="swiss-input"
+              placeholder="请输入作文标题..."
+              className="s-input"
             />
           </div>
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
-              <label className="swiss-label mb-0">Your Essay</label>
-              <span className="text-xs text-swiss-gray">{wordCount} words</span>
+              <label className="s-label mb-0">你的作文</label>
+              <span className="font-mono text-xs text-gray-500">{wordCount} 词</span>
             </div>
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="Write your essay in English..."
+              placeholder="请用英文写下你的作文..."
               rows={16}
-              className="swiss-input resize-none"
+              className="s-textarea"
             />
           </div>
           <button
             onClick={handleSubmit}
             disabled={loading || !content.trim()}
-            className="swiss-btn w-full flex items-center justify-center gap-2"
+            className="s-btn w-full flex items-center justify-center gap-2"
           >
             <Send size={14} />
-            {loading ? "Evaluating..." : "Submit for Review"}
+            {loading ? "批改中..." : "提交批改"}
           </button>
         </div>
 
-        {/* Feedback Panel */}
+        {/* 反馈面板 */}
         <div>
           {!feedback && !loading && (
-            <div className="swiss-card h-full flex items-center justify-center">
-              <p className="text-swiss-gray text-sm text-center">
-                Write your essay and submit
+            <div className="s-card h-full flex items-center justify-center">
+              <p className="font-mono text-sm text-gray-500 text-center">
+                写下你的作文并提交，
                 <br />
-                to receive AI feedback.
+                即可获得 AI 反馈。
               </p>
             </div>
           )}
 
           {loading && (
-            <div className="swiss-card h-full flex items-center justify-center">
-              <p className="text-swiss-gray text-sm">Analyzing your essay...</p>
+            <div className="s-card h-full flex items-center justify-center">
+              <p className="font-mono text-sm text-gray-500">正在分析你的作文...</p>
             </div>
           )}
 
           {feedback && (
             <div className="space-y-4">
-              {/* Score */}
+              {/* 分数 */}
               {feedback.score && (
-                <div className="swiss-card text-center py-6">
-                  <p className="swiss-label">Score</p>
-                  <p className="text-4xl font-bold">{feedback.score}</p>
-                  <p className="text-xs text-swiss-gray mt-1">/ 100</p>
+                <div className="s-card text-center py-6">
+                  <p className="s-label">综合评分</p>
+                  <p className="text-5xl font-black">{feedback.score}</p>
+                  <p className="font-mono text-xs text-gray-500 mt-1">/ 100</p>
                 </div>
               )}
 
-              {/* Overall Comment */}
+              {/* 总体评价 */}
               {feedback.overall_comment && (
-                <div className="swiss-card">
-                  <p className="swiss-label">Overall</p>
-                  <p className="text-sm leading-relaxed">
+                <div className="s-card">
+                  <p className="s-label">总体评价</p>
+                  <p className="font-mono text-sm leading-relaxed">
                     {feedback.overall_comment}
                   </p>
                 </div>
               )}
 
-              {/* Grammar Issues */}
+              {/* 语法问题 */}
               {feedback.grammar_issues && (
-                <div className="swiss-card">
-                  <p className="swiss-label">Grammar Issues</p>
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                <div className="s-card">
+                  <p className="s-label">语法问题</p>
+                  <p className="font-mono text-sm leading-relaxed whitespace-pre-wrap">
                     {feedback.grammar_issues}
                   </p>
                 </div>
               )}
 
-              {/* Expression */}
+              {/* 表达建议 */}
               {feedback.expression_suggestions && (
-                <div className="swiss-card">
-                  <p className="swiss-label">Expression</p>
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                <div className="s-card">
+                  <p className="s-label">表达建议</p>
+                  <p className="font-mono text-sm leading-relaxed whitespace-pre-wrap">
                     {feedback.expression_suggestions}
                   </p>
                 </div>
               )}
 
-              {/* Structure */}
+              {/* 结构反馈 */}
               {feedback.structure_feedback && (
-                <div className="swiss-card">
-                  <p className="swiss-label">Structure</p>
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                <div className="s-card">
+                  <p className="s-label">文章结构</p>
+                  <p className="font-mono text-sm leading-relaxed whitespace-pre-wrap">
                     {feedback.structure_feedback}
                   </p>
                 </div>
               )}
 
-              {/* Improved Version */}
+              {/* 改进版本 */}
               {feedback.improved_version && (
-                <div className="swiss-card bg-swiss-bg">
-                  <p className="swiss-label">Improved Version</p>
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                <div className="s-card bg-gray-50">
+                  <p className="s-label">改进版本</p>
+                  <p className="font-mono text-sm leading-relaxed whitespace-pre-wrap">
                     {feedback.improved_version}
                   </p>
                 </div>

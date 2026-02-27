@@ -35,7 +35,7 @@ export default function SelectionPopup({
       setTranslation(result.translation);
       setExplanation(result.explanation || "");
     } catch {
-      setTranslation("Translation failed.");
+      setTranslation("翻译失败。");
     } finally {
       setLoading(false);
     }
@@ -48,7 +48,7 @@ export default function SelectionPopup({
       const result = await api.translate.explain(text, context);
       setAiExplanation(result.explanation);
     } catch {
-      setAiExplanation("Explanation failed.");
+      setAiExplanation("讲解失败。");
     } finally {
       setLoading(false);
     }
@@ -71,74 +71,74 @@ export default function SelectionPopup({
   return (
     <div
       data-popup
-      className="fixed z-50 bg-swiss-white border border-swiss-light shadow-lg"
+      className="fixed z-50 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
       style={{
         left: Math.min(x - 160, window.innerWidth - 340),
         top: y,
         width: 320,
       }}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-swiss-light">
-        <p className="text-sm font-medium truncate max-w-[240px]">&ldquo;{text}&rdquo;</p>
-        <button onClick={onClose} className="text-swiss-gray hover:text-swiss-black">
+      {/* 头部 */}
+      <div className="flex items-center justify-between px-4 py-3 border-b-2 border-black">
+        <p className="font-sans font-bold text-sm truncate max-w-[240px]">&ldquo;{text}&rdquo;</p>
+        <button onClick={onClose} className="text-gray-500 hover:text-black transition-colors">
           <X size={14} />
         </button>
       </div>
 
-      {/* Actions */}
+      {/* 操作按钮 */}
       {mode === "actions" && (
         <div className="p-2">
           <button
             onClick={handleTranslate}
-            className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-left hover:bg-swiss-bg transition-colors"
+            className="flex items-center gap-2 w-full px-3 py-2.5 font-mono text-sm text-left rounded-none hover:bg-gray-100 transition-colors"
           >
-            <Languages size={16} className="text-swiss-gray" />
-            Translate
+            <Languages size={16} className="text-gray-500" />
+            翻译
           </button>
           <button
             onClick={handleSaveVocab}
-            className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-left hover:bg-swiss-bg transition-colors"
+            className="flex items-center gap-2 w-full px-3 py-2.5 font-mono text-sm text-left rounded-none hover:bg-gray-100 transition-colors"
           >
-            <BookmarkPlus size={16} className="text-swiss-gray" />
-            Save to Vocabulary
+            <BookmarkPlus size={16} className="text-gray-500" />
+            收藏单词
           </button>
           <button
             onClick={handleExplain}
-            className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-left hover:bg-swiss-bg transition-colors"
+            className="flex items-center gap-2 w-full px-3 py-2.5 font-mono text-sm text-left rounded-none hover:bg-gray-100 transition-colors"
           >
-            <Lightbulb size={16} className="text-swiss-gray" />
-            AI Explain
+            <Lightbulb size={16} className="text-gray-500" />
+            AI 讲解
           </button>
         </div>
       )}
 
-      {/* Translation Result */}
+      {/* 翻译结果 */}
       {mode === "translate" && (
         <div className="p-4">
           {loading ? (
-            <p className="text-sm text-swiss-gray">Translating...</p>
+            <p className="font-mono text-sm text-gray-500">翻译中...</p>
           ) : (
             <>
-              <p className="text-sm font-medium mb-2">{translation}</p>
+              <p className="font-mono text-sm font-bold mb-2">{translation}</p>
               {explanation && (
-                <p className="text-xs text-swiss-gray leading-relaxed">
+                <p className="font-mono text-xs text-gray-500 leading-relaxed">
                   {explanation}
                 </p>
               )}
               <div className="flex gap-2 mt-3">
                 <button
                   onClick={handleSaveVocab}
-                  className="swiss-btn-outline text-xs py-1.5 flex items-center gap-1"
+                  className="s-btn-outline text-xs py-1.5 flex items-center gap-1"
                 >
                   <BookmarkPlus size={12} />
-                  Save Word
+                  收藏单词
                 </button>
                 <button
                   onClick={() => setMode("actions")}
-                  className="swiss-btn-ghost text-xs"
+                  className="s-btn-ghost text-xs"
                 >
-                  Back
+                  返回
                 </button>
               </div>
             </>
@@ -146,32 +146,32 @@ export default function SelectionPopup({
         </div>
       )}
 
-      {/* AI Explanation */}
+      {/* AI 讲解 */}
       {mode === "explain" && (
         <div className="p-4 max-h-64 overflow-y-auto">
           {loading ? (
-            <p className="text-sm text-swiss-gray">Analyzing...</p>
+            <p className="font-mono text-sm text-gray-500">分析中...</p>
           ) : (
             <>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">
+              <p className="font-mono text-sm leading-relaxed whitespace-pre-wrap">
                 {aiExplanation}
               </p>
               <button
                 onClick={() => setMode("actions")}
-                className="swiss-btn-ghost text-xs mt-3"
+                className="s-btn-ghost text-xs mt-3"
               >
-                Back
+                返回
               </button>
             </>
           )}
         </div>
       )}
 
-      {/* Saved Confirmation */}
+      {/* 已收藏确认 */}
       {mode === "saved" && (
-        <div className="p-4 flex items-center gap-2 text-sm">
+        <div className="p-4 flex items-center gap-2 font-mono text-sm">
           <Check size={16} className="text-green-600" />
-          <span>Saved to vocabulary!</span>
+          <span>已收藏到生词本!</span>
         </div>
       )}
     </div>

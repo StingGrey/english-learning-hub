@@ -12,66 +12,66 @@ export default function DashboardPage() {
 
   return (
     <div>
-      {/* Header */}
+      {/* 页头 */}
       <div className="mb-12">
-        <p className="swiss-label">Dashboard</p>
-        <h1>Good morning.</h1>
-        <p className="text-swiss-gray mt-2">
-          Your daily English learning overview.
+        <p className="s-label">学习概览</p>
+        <h1>早上好。</h1>
+        <p className="font-mono text-sm md:text-base text-gray-500 mt-2">
+          这是你今天的英语学习总览。
         </p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-4 gap-px bg-swiss-light mb-12">
+      {/* 数据统计 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
         <StatCard
-          label="Tasks Done"
+          label="已完成任务"
           value={`${stats?.tasks_done ?? 0}/${stats?.tasks_total ?? 0}`}
         />
-        <StatCard label="New Words" value={stats?.new_vocab ?? 0} />
-        <StatCard label="Due Review" value={stats?.due_review ?? 0} />
+        <StatCard label="新学单词" value={stats?.new_vocab ?? 0} />
+        <StatCard label="待复习" value={stats?.due_review ?? 0} />
         <StatCard
-          label="Plan"
-          value={plan ? "Active" : "None"}
+          label="学习计划"
+          value={plan ? "进行中" : "暂无"}
         />
       </div>
 
-      {/* Quick Actions */}
+      {/* 快捷操作 */}
       <div className="mb-12">
-        <p className="swiss-label mb-4">Quick Actions</p>
-        <div className="grid grid-cols-4 gap-4">
-          <QuickAction href="/discover" icon={BookOpen} label="Read Article" />
-          <QuickAction href="/vocab" icon={Languages} label="Review Vocab" />
-          <QuickAction href="/speaking" icon={MessageCircle} label="Practice Speaking" />
-          <QuickAction href="/writing" icon={PenLine} label="Write Essay" />
+        <p className="s-label mb-4">快捷操作</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <QuickAction href="/discover" icon={BookOpen} label="阅读文章" />
+          <QuickAction href="/vocab" icon={Languages} label="复习词汇" />
+          <QuickAction href="/speaking" icon={MessageCircle} label="口语练习" />
+          <QuickAction href="/writing" icon={PenLine} label="写作练习" />
         </div>
       </div>
 
-      {/* Recommended Articles */}
+      {/* 推荐阅读 */}
       {recommended && recommended.length > 0 && (
         <div>
-          <p className="swiss-label mb-4">Recommended Reading</p>
-          <div className="space-y-px bg-swiss-light">
+          <p className="s-label mb-4">推荐阅读</p>
+          <div className="space-y-4">
             {recommended.map((article: any) => (
               <Link
                 key={article.id}
                 href={`/reader/?id=${article.id}`}
-                className="block bg-swiss-white p-5 hover:bg-swiss-bg transition-colors"
+                className="s-card-hover block"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-medium leading-snug truncate">
+                    <h3 className="font-black text-sm md:text-base leading-snug truncate">
                       {article.title}
                     </h3>
                     {article.summary && (
-                      <p className="text-xs text-swiss-gray mt-1 line-clamp-1">
+                      <p className="font-mono text-xs md:text-sm text-gray-500 mt-1 line-clamp-1">
                         {article.summary}
                       </p>
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="swiss-tag">{article.difficulty}</span>
-                    <span className="text-xs text-swiss-gray">
-                      {article.word_count}w
+                    <span className="s-tag">{article.difficulty}</span>
+                    <span className="font-mono text-xs text-gray-500">
+                      {article.word_count}词
                     </span>
                   </div>
                 </div>
@@ -86,11 +86,11 @@ export default function DashboardPage() {
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="bg-swiss-white p-6">
-      <p className="text-[10px] uppercase tracking-[0.15em] text-swiss-gray mb-2">
+    <div className="s-card-hover">
+      <p className="font-sans font-bold text-xs uppercase tracking-widest text-gray-500 mb-2">
         {label}
       </p>
-      <p className="text-2xl font-bold">{value}</p>
+      <p className="text-2xl md:text-3xl font-black">{value}</p>
     </div>
   );
 }
@@ -107,14 +107,14 @@ function QuickAction({
   return (
     <Link
       href={href}
-      className="swiss-card flex flex-col items-center justify-center py-8 hover:bg-swiss-bg transition-colors group"
+      className="s-card-hover flex flex-col items-center justify-center py-8 group"
     >
       <Icon
         size={24}
         strokeWidth={1.5}
-        className="text-swiss-gray group-hover:text-swiss-black transition-colors mb-3"
+        className="text-gray-500 group-hover:text-black transition-colors mb-3"
       />
-      <span className="text-xs uppercase tracking-wider text-swiss-gray group-hover:text-swiss-black">
+      <span className="font-sans font-bold text-xs uppercase tracking-widest text-gray-500 group-hover:text-black transition-colors">
         {label}
       </span>
     </Link>

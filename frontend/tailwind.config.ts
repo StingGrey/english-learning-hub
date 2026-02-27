@@ -16,20 +16,15 @@ const config: Config = {
           "Arial",
           "sans-serif",
         ],
+        mono: [
+          "JetBrains Mono",
+          "SF Mono",
+          "Consolas",
+          "monospace",
+        ],
       },
       colors: {
-        swiss: {
-          black: "#0a0a0a",
-          dark: "#1a1a1a",
-          gray: "#6b6b6b",
-          light: "#e5e5e5",
-          bg: "#fafafa",
-          white: "#ffffff",
-          accent: "#e60000", // 瑞士红，用于极少量强调
-        },
-      },
-      spacing: {
-        grid: "8px",
+        accent: "#ff006e",
       },
     },
   },

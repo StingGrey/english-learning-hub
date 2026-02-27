@@ -2,68 +2,112 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 瑞士国际风格：理性、干净、网格感 */
+/*
+ * Swiss International Style — Hard Prompt
+ * rounded-none | border-black | shadow-[硬阴影] | font-black 标题 | font-mono 正文
+ */
+
 @layer base {
   body {
-    @apply bg-swiss-bg text-swiss-black font-sans antialiased;
-    font-feature-settings: "kern" 1, "liga" 1;
+    @apply bg-white text-black font-sans antialiased;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-bold tracking-tight;
+    @apply font-sans font-black tracking-tight;
   }
 
-  h1 { @apply text-4xl leading-tight; }
-  h2 { @apply text-2xl leading-snug; }
-  h3 { @apply text-xl; }
+  h1 { @apply text-4xl md:text-6xl leading-tight; }
+  h2 { @apply text-2xl md:text-4xl; }
+  h3 { @apply text-lg md:text-xl; }
 
   ::selection {
-    @apply bg-swiss-black text-swiss-white;
+    @apply bg-black text-white;
+  }
+
+  * {
+    border-radius: 0 !important;
   }
 }
 
 @layer components {
-  .swiss-card {
-    @apply bg-swiss-white border border-swiss-light p-6;
+  /* ── 卡片 ── */
+  .s-card {
+    @apply rounded-none border-2 border-black bg-white p-4 md:p-6;
   }
 
-  .swiss-btn {
-    @apply px-5 py-2.5 bg-swiss-black text-swiss-white text-sm font-medium
-           tracking-wide uppercase transition-colors
-           hover:bg-swiss-dark active:bg-swiss-gray;
+  .s-card-hover {
+    @apply s-card shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]
+           hover:shadow-[4px_4px_0px_0px_rgba(255,0,110,1)]
+           hover:-translate-y-0.5 transition-all;
   }
 
-  .swiss-btn-outline {
-    @apply px-5 py-2.5 border border-swiss-black text-swiss-black text-sm font-medium
-           tracking-wide uppercase transition-colors
-           hover:bg-swiss-black hover:text-swiss-white;
+  /* ── 按钮 ── */
+  .s-btn {
+    @apply rounded-none font-sans font-bold text-sm md:text-base
+           px-4 py-2 md:px-6 md:py-3
+           bg-black text-white border-2 border-black
+           shadow-[4px_4px_0px_0px_rgba(255,0,110,1)]
+           hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]
+           active:opacity-70 transition-all duration-150;
   }
 
-  .swiss-btn-ghost {
-    @apply px-4 py-2 text-sm text-swiss-gray hover:text-swiss-black transition-colors;
+  .s-btn-outline {
+    @apply rounded-none font-sans font-bold text-sm md:text-base
+           px-4 py-2 md:px-6 md:py-3
+           bg-white text-black border-2 border-black
+           shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]
+           hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]
+           active:opacity-70 transition-all duration-150;
   }
 
-  .swiss-input {
-    @apply w-full px-4 py-3 border border-swiss-light bg-swiss-white
-           text-swiss-black placeholder-swiss-gray
-           focus:outline-none focus:border-swiss-black transition-colors;
+  .s-btn-ghost {
+    @apply rounded-none font-sans font-bold text-sm
+           px-3 py-1.5 text-gray-500 hover:text-black
+           transition-opacity duration-150;
   }
 
-  .swiss-label {
-    @apply block text-xs font-medium uppercase tracking-widest text-swiss-gray mb-2;
+  .s-btn-sm {
+    @apply rounded-none font-sans font-bold text-xs
+           px-3 py-1.5 border-2 border-black
+           transition-all duration-150
+           active:opacity-70;
   }
 
-  .swiss-divider {
-    @apply border-t border-swiss-light;
+  /* ── 输入框 ── */
+  .s-input {
+    @apply rounded-none w-full px-3 py-2 md:px-4 md:py-3
+           border-2 border-black font-mono text-sm md:text-base
+           bg-white text-black placeholder-gray-400
+           focus:outline-none focus:shadow-[4px_4px_0px_0px_rgba(255,0,110,1)]
+           transition-all;
   }
 
-  .swiss-tag {
-    @apply inline-block px-2 py-0.5 text-xs font-medium uppercase tracking-wider
-           border border-swiss-light text-swiss-gray;
+  .s-textarea {
+    @apply s-input resize-none;
   }
 
-  .swiss-tag-accent {
-    @apply inline-block px-2 py-0.5 text-xs font-medium uppercase tracking-wider
-           bg-swiss-black text-swiss-white;
+  /* ── 标签 ── */
+  .s-label {
+    @apply block font-sans font-bold text-xs uppercase tracking-widest text-gray-500 mb-2;
+  }
+
+  .s-tag {
+    @apply inline-block rounded-none px-2 py-0.5 text-xs font-bold uppercase tracking-wider
+           border-2 border-black text-black;
+  }
+
+  .s-tag-accent {
+    @apply inline-block rounded-none px-2 py-0.5 text-xs font-bold uppercase tracking-wider
+           bg-accent text-white border-2 border-accent;
+  }
+
+  .s-tag-filled {
+    @apply inline-block rounded-none px-2 py-0.5 text-xs font-bold uppercase tracking-wider
+           bg-black text-white;
+  }
+
+  /* ── 分割线 ── */
+  .s-divider {
+    @apply border-t-2 border-black;
   }
 }

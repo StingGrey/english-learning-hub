@@ -50,7 +50,7 @@ export default function SpeakingPage() {
     } catch {
       setTurns((prev) => [
         ...prev,
-        { role: "assistant", content: "Sorry, something went wrong." },
+        { role: "assistant", content: "抱歉，出了点小问题，请再试一次～" },
       ]);
     } finally {
       setLoading(false);
@@ -62,18 +62,25 @@ export default function SpeakingPage() {
     setTurns([]);
   };
 
+  const scenarioLabels: Record<string, string> = {
+    daily: "日常对话",
+    interview: "面试模拟",
+    travel: "旅行场景",
+    business: "商务英语",
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-80px)]">
-      {/* Header */}
+      {/* 页面标题 */}
       <div className="mb-8">
-        <p className="swiss-label">Speaking</p>
-        <h1>Conversation Practice</h1>
+        <p className="s-label">口语练习</p>
+        <h1 className="font-black">对话训练</h1>
       </div>
 
-      {/* Scenario Selector */}
-      <div className="flex items-center gap-2 mb-6">
-        <span className="text-xs text-swiss-gray uppercase tracking-wider">
-          Scenario:
+      {/* 场景选择 */}
+      <div className="flex items-center gap-2 mb-6 flex-wrap">
+        <span className="s-label mb-0 mr-1">
+          场景：
         </span>
         {["daily", "interview", "travel", "business"].map((s) => (
           <button
@@ -83,29 +90,28 @@ export default function SpeakingPage() {
               if (turns.length === 0) return;
               startNew();
             }}
-            className={`px-3 py-1.5 text-xs uppercase tracking-wider border transition-colors ${
+            className={`px-4 py-2 font-sans font-bold text-xs uppercase tracking-wider border-2 border-black rounded-none transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] ${
               scenario === s
-                ? "bg-swiss-black text-swiss-white border-swiss-black"
-                : "border-swiss-light text-swiss-gray hover:border-swiss-black"
+                ? "bg-black text-white"
+                : "bg-white text-black hover:bg-black hover:text-white"
             }`}
           >
-            {s}
+            {scenarioLabels[s]}
           </button>
         ))}
         {turns.length > 0 && (
-          <button onClick={startNew} className="swiss-btn-ghost text-xs ml-auto">
-            New Conversation
+          <button onClick={startNew} className="s-btn-ghost text-xs ml-auto">
+            新对话
           </button>
         )}
       </div>
 
-      {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto border border-swiss-light bg-swiss-white p-6 space-y-6">
+      {/* 聊天区域 */}
+      <div className="flex-1 overflow-y-auto border-2 border-black rounded-none bg-white p-6 space-y-6">
         {turns.length === 0 && (
           <div className="text-center py-16">
-            <p className="text-swiss-gray text-sm">
-              Start a conversation in English. I&apos;ll help correct your
-              grammar and suggest better expressions.
+            <p className="font-mono text-sm text-gray-500">
+              用英语开始对话吧～ 我会帮你纠正语法并建议更地道的表达方式
             </p>
           </div>
         )}
@@ -113,33 +119,33 @@ export default function SpeakingPage() {
         {turns.map((turn, i) => (
           <div key={i} className={`flex ${turn.role === "user" ? "justify-end" : "justify-start"}`}>
             <div
-              className={`max-w-[75%] ${
+              className={`max-w-[75%] rounded-none ${
                 turn.role === "user"
-                  ? "bg-swiss-black text-swiss-white p-4"
-                  : "bg-swiss-bg p-4"
+                  ? "bg-black text-white p-4 shadow-[4px_4px_0px_0px_rgba(255,0,110,1)]"
+                  : "bg-gray-100 border-2 border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
               }`}
             >
-              <p className="text-sm leading-relaxed">{turn.content}</p>
+              <p className="font-mono text-sm leading-relaxed">{turn.content}</p>
 
-              {/* Correction */}
+              {/* 纠正 */}
               {turn.correction && (
-                <div className="mt-3 pt-3 border-t border-swiss-gray/20">
-                  <p className="text-[10px] uppercase tracking-wider text-swiss-accent mb-1">
-                    Correction
+                <div className="mt-3 pt-3 border-t-2 border-black/20">
+                  <p className="font-sans font-bold text-xs uppercase tracking-widest text-accent mb-1">
+                    纠正
                   </p>
-                  <p className="text-xs leading-relaxed opacity-80">
+                  <p className="font-mono text-sm leading-relaxed text-accent">
                     {turn.correction}
                   </p>
                 </div>
               )}
 
-              {/* Suggestion */}
+              {/* 建议 */}
               {turn.suggestion && (
                 <div className="mt-2">
-                  <p className="text-[10px] uppercase tracking-wider text-swiss-gray mb-1">
-                    Better Expression
+                  <p className="font-sans font-bold text-xs uppercase tracking-widest text-gray-500 mb-1">
+                    更好的表达
                   </p>
-                  <p className="text-xs leading-relaxed opacity-80 italic">
+                  <p className="font-mono text-sm leading-relaxed text-gray-500">
                     {turn.suggestion}
                   </p>
                 </div>
@@ -150,29 +156,29 @@ export default function SpeakingPage() {
 
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-swiss-bg p-4">
-              <p className="text-sm text-swiss-gray">Thinking...</p>
+            <div className="bg-gray-100 border-2 border-black rounded-none p-4">
+              <p className="font-mono text-sm text-gray-500">思考中...</p>
             </div>
           </div>
         )}
         <div ref={chatEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="flex gap-2 mt-4">
+      {/* 输入区域 */}
+      <div className="flex gap-3 mt-4">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          placeholder="Type your message in English..."
-          className="swiss-input flex-1"
+          placeholder="用英语输入你想说的话..."
+          className="s-input flex-1"
           disabled={loading}
         />
         <button
           onClick={handleSend}
           disabled={loading || !input.trim()}
-          className="swiss-btn px-6"
+          className="s-btn px-6 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <Send size={16} />
         </button>

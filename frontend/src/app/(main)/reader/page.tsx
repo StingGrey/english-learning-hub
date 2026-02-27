@@ -60,12 +60,19 @@ function ReaderContent() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  const difficultyLabel = (d: string) => {
+    if (d === "easy") return "简单";
+    if (d === "medium") return "中等";
+    if (d === "hard") return "困难";
+    return d;
+  };
+
   if (!articleId) {
     return (
-      <div className="swiss-card text-center py-16">
-        <p className="text-swiss-gray">No article selected.</p>
-        <Link href="/discover/" className="swiss-btn mt-4 inline-block">
-          Browse Articles
+      <div className="s-card text-center py-16">
+        <p className="font-mono text-sm text-gray-500">未选择文章</p>
+        <Link href="/discover/" className="s-btn mt-4 inline-block">
+          浏览文章
         </Link>
       </div>
     );
@@ -74,17 +81,17 @@ function ReaderContent() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-swiss-gray">Loading article...</p>
+        <p className="font-mono text-sm text-gray-500">加载文章中...</p>
       </div>
     );
   }
 
   if (!article) {
     return (
-      <div className="swiss-card text-center py-16">
-        <p className="text-swiss-gray">Article not found.</p>
-        <Link href="/discover/" className="swiss-btn mt-4 inline-block">
-          Back to Discover
+      <div className="s-card text-center py-16">
+        <p className="font-mono text-sm text-gray-500">未找到文章</p>
+        <Link href="/discover/" className="s-btn mt-4 inline-block">
+          返回发现
         </Link>
       </div>
     );
@@ -92,66 +99,68 @@ function ReaderContent() {
 
   return (
     <div>
-      {/* Header */}
+      {/* 页面头部 */}
       <div className="mb-8">
         <Link
           href="/discover/"
-          className="swiss-btn-ghost inline-flex items-center gap-1 mb-4 -ml-4"
+          className="s-btn-ghost inline-flex items-center gap-1 mb-4 -ml-4"
         >
           <ArrowLeft size={14} />
-          Back
+          返回
         </Link>
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
-            <p className="swiss-label">Reader</p>
-            <h1 className="text-2xl leading-snug">{article.title}</h1>
+            <p className="s-label">阅读器</p>
+            <h1 className="font-black text-2xl md:text-3xl leading-snug tracking-tight">
+              {article.title}
+            </h1>
             <div className="flex items-center gap-4 mt-3">
-              <span className="swiss-tag">{article.difficulty}</span>
-              <span className="text-xs text-swiss-gray">
-                {article.word_count} words
+              <span className="s-tag">{difficultyLabel(article.difficulty)}</span>
+              <span className="font-mono text-xs text-gray-500">
+                {article.word_count} 词
               </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* View Mode Toggle */}
-      <div className="flex items-center gap-2 mb-8 pb-6 border-b border-swiss-light">
+      {/* 阅读模式切换 */}
+      <div className="flex items-center gap-2 mb-8 pb-6 border-b-2 border-black">
         <button
           onClick={() => setViewMode("en")}
-          className={`flex items-center gap-1.5 px-4 py-2 text-xs uppercase tracking-wider border transition-colors ${
+          className={`flex items-center gap-1.5 px-4 py-2 font-sans font-bold text-xs uppercase tracking-widest border-2 border-black rounded-none transition-all ${
             viewMode === "en"
-              ? "bg-swiss-black text-swiss-white border-swiss-black"
-              : "border-swiss-light text-swiss-gray hover:border-swiss-black"
+              ? "bg-black text-white shadow-[4px_4px_0px_0px_rgba(255,0,110,1)]"
+              : "bg-white text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5"
           }`}
         >
           <BookOpen size={12} />
-          English
+          英文
         </button>
         <button
           onClick={() => setViewMode("bilingual")}
-          className={`flex items-center gap-1.5 px-4 py-2 text-xs uppercase tracking-wider border transition-colors ${
+          className={`flex items-center gap-1.5 px-4 py-2 font-sans font-bold text-xs uppercase tracking-widest border-2 border-black rounded-none transition-all ${
             viewMode === "bilingual"
-              ? "bg-swiss-black text-swiss-white border-swiss-black"
-              : "border-swiss-light text-swiss-gray hover:border-swiss-black"
+              ? "bg-black text-white shadow-[4px_4px_0px_0px_rgba(255,0,110,1)]"
+              : "bg-white text-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5"
           }`}
         >
           <Globe size={12} />
-          Bilingual
+          双语
         </button>
       </div>
 
-      {/* Summary */}
+      {/* 摘要 */}
       {article.summary && (
-        <div className="swiss-card mb-8 bg-swiss-bg">
-          <p className="swiss-label">Summary</p>
-          <p className="text-sm text-swiss-dark leading-relaxed">
+        <div className="s-card mb-8 bg-gray-50">
+          <p className="s-label">摘要</p>
+          <p className="font-mono text-sm md:text-base text-black leading-relaxed">
             {article.summary}
           </p>
         </div>
       )}
 
-      {/* Article Content */}
+      {/* 文章内容 */}
       <div
         ref={contentRef}
         onMouseUp={handleMouseUp}
@@ -161,11 +170,11 @@ function ReaderContent() {
           <div className="space-y-4">
             {article.sentences.map((sentence: any, i: number) => (
               <div key={i} className="group">
-                <p className="text-base leading-[1.8] text-swiss-dark selection:bg-swiss-black selection:text-swiss-white">
+                <p className="font-mono text-sm md:text-base leading-relaxed text-black selection:bg-black selection:text-white">
                   {sentence.text_en}
                 </p>
                 {viewMode === "bilingual" && sentence.text_zh && (
-                  <p className="text-sm text-swiss-gray mt-1 leading-relaxed">
+                  <p className="font-mono text-sm text-gray-500 mt-1 leading-relaxed">
                     {sentence.text_zh}
                   </p>
                 )}
@@ -173,15 +182,15 @@ function ReaderContent() {
             ))}
           </div>
         ) : (
-          <div className="prose max-w-none">
-            <p className="text-base leading-[1.8] text-swiss-dark whitespace-pre-wrap selection:bg-swiss-black selection:text-swiss-white">
+          <div className="max-w-none">
+            <p className="font-mono text-sm md:text-base leading-relaxed text-black whitespace-pre-wrap selection:bg-black selection:text-white">
               {article.content}
             </p>
           </div>
         )}
       </div>
 
-      {/* Selection Popup */}
+      {/* 选词弹窗 */}
       {popup && (
         <SelectionPopup
           text={popup.text}
@@ -198,7 +207,7 @@ function ReaderContent() {
 
 export default function ReaderPage() {
   return (
-    <Suspense fallback={<p className="text-swiss-gray">Loading...</p>}>
+    <Suspense fallback={<p className="font-mono text-sm text-gray-500">加载中...</p>}>
       <ReaderContent />
     </Suspense>
   );

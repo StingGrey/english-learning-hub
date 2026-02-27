@@ -30,78 +30,78 @@ export default function PlanPage() {
     <div>
       <div className="flex items-end justify-between mb-12">
         <div>
-          <p className="swiss-label">Today&apos;s Plan</p>
-          <h1>Study Plan</h1>
+          <p className="s-label">今日计划</p>
+          <h1>学习计划</h1>
         </div>
         <button
           onClick={handleGenerate}
           disabled={generating}
-          className="swiss-btn flex items-center gap-2"
+          className="s-btn flex items-center gap-2"
         >
           <RotateCw size={14} className={generating ? "animate-spin" : ""} />
-          {generating ? "Generating..." : "Generate Plan"}
+          {generating ? "生成中..." : "生成计划"}
         </button>
       </div>
 
       {loading ? (
-        <p className="text-swiss-gray">Loading...</p>
+        <p className="font-mono text-sm text-gray-500">加载中...</p>
       ) : !plan ? (
-        <div className="swiss-card text-center py-16">
-          <p className="text-swiss-gray mb-4">No plan for today yet.</p>
-          <button onClick={handleGenerate} className="swiss-btn">
-            Generate Plan
+        <div className="s-card text-center py-16">
+          <p className="font-mono text-sm text-gray-500 mb-4">今天还没有学习计划哦。</p>
+          <button onClick={handleGenerate} className="s-btn">
+            生成计划
           </button>
         </div>
       ) : (
         <div>
-          {/* Plan Info */}
-          <div className="flex items-center gap-6 mb-8 text-sm text-swiss-gray">
-            <span>
-              Goal:{" "}
-              <span className="text-swiss-black font-medium uppercase">
+          {/* 计划信息 */}
+          <div className="flex items-center gap-6 mb-8">
+            <span className="font-mono text-sm text-gray-500">
+              目标：{" "}
+              <span className="font-black text-black uppercase">
                 {plan.goal}
               </span>
             </span>
-            <span>
-              Duration:{" "}
-              <span className="text-swiss-black font-medium">
-                {plan.total_minutes} min
+            <span className="font-mono text-sm text-gray-500">
+              时长：{" "}
+              <span className="font-black text-black">
+                {plan.total_minutes} 分钟
               </span>
             </span>
           </div>
 
-          {/* Tasks */}
-          <div className="space-y-px bg-swiss-light">
+          {/* 任务列表 */}
+          <div className="space-y-4">
             {plan.tasks?.map((task: any) => (
               <div
                 key={task.id}
-                className={`flex items-center gap-4 bg-swiss-white p-5 ${
-                  task.is_completed ? "opacity-60" : ""
+                className={`flex items-center gap-4 border-2 border-black bg-white p-4 md:p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all ${
+                  task.is_completed ? "opacity-50" : ""
                 }`}
               >
                 <button
                   onClick={() => !task.is_completed && handleComplete(task.id)}
-                  className={`w-6 h-6 border flex items-center justify-center shrink-0 transition-colors ${
+                  className={`w-6 h-6 border-2 border-black flex items-center justify-center shrink-0 transition-all ${
                     task.is_completed
-                      ? "bg-swiss-black border-swiss-black text-swiss-white"
-                      : "border-swiss-light hover:border-swiss-black"
+                      ? "bg-black text-white"
+                      : "bg-white hover:bg-gray-100"
                   }`}
                 >
                   {task.is_completed && <Check size={14} />}
                 </button>
                 <div className="flex-1 min-w-0">
                   <p
-                    className={`text-sm ${
-                      task.is_completed ? "line-through text-swiss-gray" : ""
+                    className={`font-mono text-sm md:text-base ${
+                      task.is_completed ? "line-through text-gray-500" : "text-black"
                     }`}
                   >
                     {task.title}
                   </p>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
-                  <span className="swiss-tag">{task.task_type}</span>
-                  <span className="text-xs text-swiss-gray">
-                    {task.duration_minutes}m
+                  <span className="s-tag">{task.task_type}</span>
+                  <span className="font-mono text-xs text-gray-500">
+                    {task.duration_minutes}分钟
                   </span>
                 </div>
               </div>
