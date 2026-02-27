@@ -1,43 +1,107 @@
 /**
- * 客户端 AI 服务 —— 浏览器直连 OpenAI 兼容 API
- * API Key 存储在 IndexedDB 的 userProfile 中
+ * 客户端 AI 服务 —— 兼容 OpenAI / Claude / Gemini(API Key & Vertex)
+ * API Key / Vertex 配置存储在 IndexedDB 的 userProfile 中
  */
 import { db } from "./db";
 
-async function getConfig() {
+type ChatMessage = {
+  role: "system" | "user" | "assistant" | "tool";
+  content: string;
+  name?: string;
+  tool_call_id?: string;
+};
+
+type ToolDefinition = {
+  name: string;
+  description?: string;
+  parameters: Record<string, any>;
+};
+
+type ToolCall = {
+  id: string;
+  name: string;
+  arguments: string;
+};
+
+type ChatResult = {
+  text: string;
+  toolCalls: ToolCall[];
+};
+
+type AIFormat = "openai" | "claude" | "gemini";
+
+type VertexServiceAccount = {
+  client_email: string;
+  private_key: string;
+  token_uri?: string;
+  project_id?: string;
+};
+
+type VertexConfig = {
+  enabled?: boolean;
+  project_id: string;
+  location: string;
+  service_account_json: string;
+};
+
+type AIConfig = {
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+  apiFormat: AIFormat;
+  vertexConfig: VertexConfig | null;
+};
+
+const DEFAULT_BASE_URLS: Record<AIFormat, string> = {
+  openai: "https://api.openai.com/v1",
+  claude: "https://api.anthropic.com/v1",
+  gemini: "https://generativelanguage.googleapis.com/v1beta",
+};
+
+let vertexTokenCache: { token: string; expiresAt: number; cacheKey: string } | null = null;
+
+function parseMaybeJSON<T>(text: string, fallback: T): T {
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function parseVertexConfig(raw?: string): VertexConfig | null {
+  if (!raw?.trim()) return null;
+  const parsed = parseMaybeJSON<any>(raw, null);
+  if (!parsed || typeof parsed !== "object") return null;
+
+  const projectId = String(parsed.project_id || "").trim();
+  const location = String(parsed.location || "").trim() || "us-central1";
+  const serviceAccountJSON = String(parsed.service_account_json || "").trim();
+
+  if (!projectId || !serviceAccountJSON) return null;
+  return {
+    enabled: parsed.enabled !== false,
+    project_id: projectId,
+    location,
+    service_account_json: serviceAccountJSON,
+  };
+}
+
+async function getConfig(): Promise<AIConfig> {
   const profile = await db.userProfile.toCollection().first();
   if (!profile || !profile.ai_api_key) {
     throw new Error("请先在设置页面配置 AI API Key");
   }
+
+  const apiFormat = (profile.ai_api_format || "openai") as AIFormat;
+  const baseUrl = profile.ai_base_url || DEFAULT_BASE_URLS[apiFormat] || DEFAULT_BASE_URLS.openai;
+
   return {
     apiKey: profile.ai_api_key,
-    baseUrl: profile.ai_base_url || "https://api.openai.com/v1",
+    baseUrl,
     model: profile.ai_model || "gpt-4o-mini",
+    apiFormat,
+    vertexConfig: parseVertexConfig(profile.ai_vertex_config),
   };
-}
-
-async function chat(messages: { role: string; content: string }[], temperature = 0.7): Promise<string> {
-  const config = await getConfig();
-  const resp = await fetch(`${config.baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${config.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: config.model,
-      messages,
-      temperature,
-    }),
-  });
-
-  if (!resp.ok) {
-    const err = await resp.text();
-    throw new Error(`AI API Error ${resp.status}: ${err}`);
-  }
-
-  const data = await resp.json();
-  return data.choices?.[0]?.message?.content || "";
 }
 
 function parseJSON(text: string): any {
@@ -49,26 +113,356 @@ function parseJSON(text: string): any {
   return JSON.parse(cleaned);
 }
 
-// ─── 模型列表 ───
+function toBase64Url(input: string | ArrayBuffer): string {
+  const bytes = typeof input === "string" ? new TextEncoder().encode(input) : new Uint8Array(input);
+  let str = "";
+  bytes.forEach((b) => {
+    str += String.fromCharCode(b);
+  });
+  return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
 
-export async function fetchModels(apiKey: string, baseUrl: string): Promise<{ id: string; owned_by?: string }[]> {
-  const resp = await fetch(`${baseUrl}/models`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
+function pemToArrayBuffer(pem: string): ArrayBuffer {
+  const cleaned = pem
+    .replace("-----BEGIN PRIVATE KEY-----", "")
+    .replace("-----END PRIVATE KEY-----", "")
+    .replace(/\s+/g, "");
+  const binary = atob(cleaned);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+async function getVertexAccessToken(vertexConfig: VertexConfig): Promise<string> {
+  const serviceAccount = parseMaybeJSON<VertexServiceAccount>(vertexConfig.service_account_json, {
+    client_email: "",
+    private_key: "",
+  });
+
+  if (!serviceAccount.client_email || !serviceAccount.private_key) {
+    throw new Error("Vertex 鉴权失败：service_account_json 缺少 client_email 或 private_key");
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const cacheKey = `${serviceAccount.client_email}:${vertexConfig.project_id}:${vertexConfig.location}`;
+  if (vertexTokenCache && vertexTokenCache.cacheKey === cacheKey && vertexTokenCache.expiresAt - 60 > now) {
+    return vertexTokenCache.token;
+  }
+
+  const header = { alg: "RS256", typ: "JWT" };
+  const payload = {
+    iss: serviceAccount.client_email,
+    scope: "https://www.googleapis.com/auth/cloud-platform",
+    aud: serviceAccount.token_uri || "https://oauth2.googleapis.com/token",
+    iat: now,
+    exp: now + 3600,
+  };
+
+  const encodedHeader = toBase64Url(JSON.stringify(header));
+  const encodedPayload = toBase64Url(JSON.stringify(payload));
+  const signingInput = `${encodedHeader}.${encodedPayload}`;
+
+  const privateKey = await crypto.subtle.importKey(
+    "pkcs8",
+    pemToArrayBuffer(serviceAccount.private_key),
+    {
+      name: "RSASSA-PKCS1-v1_5",
+      hash: "SHA-256",
     },
+    false,
+    ["sign"]
+  );
+
+  const signature = await crypto.subtle.sign(
+    "RSASSA-PKCS1-v1_5",
+    privateKey,
+    new TextEncoder().encode(signingInput)
+  );
+
+  const assertion = `${signingInput}.${toBase64Url(signature)}`;
+
+  const tokenResp = await fetch(serviceAccount.token_uri || "https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+      assertion,
+    }),
+  });
+
+  if (!tokenResp.ok) {
+    throw new Error(`Vertex 获取 token 失败: ${tokenResp.status} ${await tokenResp.text()}`);
+  }
+
+  const tokenData = await tokenResp.json();
+  const accessToken = tokenData.access_token as string;
+  const expiresIn = Number(tokenData.expires_in || 3600);
+
+  vertexTokenCache = {
+    token: accessToken,
+    expiresAt: now + expiresIn,
+    cacheKey,
+  };
+
+  return accessToken;
+}
+
+function splitSystemMessage(messages: ChatMessage[]) {
+  const systemMessages = messages.filter((m) => m.role === "system").map((m) => m.content);
+  const system = systemMessages.join("\n\n").trim();
+  const nonSystem = messages.filter((m) => m.role !== "system");
+  return { system, nonSystem };
+}
+
+function normalizeTextFromParts(parts: any[] = []): string {
+  return parts
+    .map((p) => (typeof p?.text === "string" ? p.text : ""))
+    .filter(Boolean)
+    .join("\n")
+    .trim();
+}
+
+async function chatWithTools(
+  messages: ChatMessage[],
+  temperature = 0.7,
+  tools?: ToolDefinition[]
+): Promise<ChatResult> {
+  const config = await getConfig();
+
+  if (config.apiFormat === "openai") {
+    const resp = await fetch(`${config.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: config.model,
+        messages,
+        temperature,
+        ...(tools?.length
+          ? {
+              tools: tools.map((t) => ({ type: "function", function: t })),
+              tool_choice: "auto",
+            }
+          : {}),
+      }),
+    });
+
+    if (!resp.ok) {
+      throw new Error(`AI API Error ${resp.status}: ${await resp.text()}`);
+    }
+
+    const data = await resp.json();
+    const message = data.choices?.[0]?.message || {};
+    const toolCalls: ToolCall[] = (message.tool_calls || []).map((call: any) => ({
+      id: call.id,
+      name: call.function?.name || "",
+      arguments: call.function?.arguments || "{}",
+    }));
+
+    return {
+      text: message.content || "",
+      toolCalls,
+    };
+  }
+
+  if (config.apiFormat === "claude") {
+    const { system, nonSystem } = splitSystemMessage(messages);
+    const claudeMessages = nonSystem
+      .filter((m) => m.role !== "tool")
+      .map((m) => ({
+        role: m.role === "assistant" ? "assistant" : "user",
+        content: m.content,
+      }));
+
+    const resp = await fetch(`${config.baseUrl}/messages`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": config.apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: config.model,
+        max_tokens: 2048,
+        temperature,
+        ...(system ? { system } : {}),
+        messages: claudeMessages,
+        ...(tools?.length
+          ? {
+              tools: tools.map((t) => ({
+                name: t.name,
+                description: t.description || "",
+                input_schema: t.parameters,
+              })),
+              tool_choice: { type: "auto" },
+            }
+          : {}),
+      }),
+    });
+
+    if (!resp.ok) {
+      throw new Error(`Claude API Error ${resp.status}: ${await resp.text()}`);
+    }
+
+    const data = await resp.json();
+    const blocks = (data.content || []) as any[];
+    const text = blocks
+      .filter((b) => b.type === "text")
+      .map((b) => b.text)
+      .join("\n")
+      .trim();
+    const toolCalls: ToolCall[] = blocks
+      .filter((b) => b.type === "tool_use")
+      .map((b) => ({
+        id: b.id,
+        name: b.name,
+        arguments: JSON.stringify(b.input || {}),
+      }));
+
+    return { text, toolCalls };
+  }
+
+  // Gemini
+  const { system, nonSystem } = splitSystemMessage(messages);
+  const contents = nonSystem.map((m) => {
+    if (m.role === "assistant") {
+      return { role: "model", parts: [{ text: m.content }] };
+    }
+    if (m.role === "tool") {
+      return {
+        role: "user",
+        parts: [{ functionResponse: { name: m.name || "tool", response: parseMaybeJSON(m.content, { content: m.content }) } }],
+      };
+    }
+    return { role: "user", parts: [{ text: m.content }] };
+  });
+
+  const geminiBody: any = {
+    contents,
+    generationConfig: {
+      temperature,
+    },
+    ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
+    ...(tools?.length
+      ? {
+          tools: [
+            {
+              functionDeclarations: tools.map((t) => ({
+                name: t.name,
+                description: t.description || "",
+                parameters: t.parameters,
+              })),
+            },
+          ],
+        }
+      : {}),
+  };
+
+  let url = "";
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+
+  if (config.vertexConfig?.enabled) {
+    const accessToken = await getVertexAccessToken(config.vertexConfig);
+    const { project_id, location } = config.vertexConfig;
+    url = `https://${location}-aiplatform.googleapis.com/v1/projects/${project_id}/locations/${location}/publishers/google/models/${config.model}:generateContent`;
+    headers.Authorization = `Bearer ${accessToken}`;
+  } else {
+    const base = config.baseUrl.replace(/\/$/, "");
+    url = `${base}/models/${config.model}:generateContent?key=${encodeURIComponent(config.apiKey)}`;
+  }
+
+  const resp = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(geminiBody),
   });
 
   if (!resp.ok) {
-    throw new Error(`获取模型列表失败: ${resp.status}`);
+    throw new Error(`Gemini API Error ${resp.status}: ${await resp.text()}`);
   }
 
   const data = await resp.json();
-  const models = (data.data || []) as { id: string; owned_by?: string }[];
-  // 按 id 字母排序
-  models.sort((a, b) => a.id.localeCompare(b.id));
-  return models;
+  const parts = data.candidates?.[0]?.content?.parts || [];
+  const text = normalizeTextFromParts(parts);
+  const toolCalls: ToolCall[] = parts
+    .filter((p: any) => p.functionCall)
+    .map((p: any, idx: number) => ({
+      id: p.functionCall.id || `gemini-tool-${idx}`,
+      name: p.functionCall.name || "",
+      arguments: JSON.stringify(p.functionCall.args || {}),
+    }));
+
+  return { text, toolCalls };
 }
+
+async function chat(messages: ChatMessage[], temperature = 0.7): Promise<string> {
+  const result = await chatWithTools(messages, temperature);
+  return result.text;
+}
+
+// ─── 模型列表 ───
+
+export async function fetchModels(
+  apiKey: string,
+  baseUrl: string,
+  apiFormat: AIFormat,
+  vertexConfigRaw?: string
+): Promise<{ id: string; owned_by?: string }[]> {
+  if (apiFormat === "openai") {
+    const resp = await fetch(`${baseUrl}/models`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    if (!resp.ok) throw new Error(`获取模型列表失败: ${resp.status}`);
+    const data = await resp.json();
+    const models = (data.data || []) as { id: string; owned_by?: string }[];
+    models.sort((a, b) => a.id.localeCompare(b.id));
+    return models;
+  }
+
+  if (apiFormat === "claude") {
+    const resp = await fetch(`${baseUrl}/models`, {
+      method: "GET",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+    });
+    if (!resp.ok) throw new Error(`获取 Claude 模型失败: ${resp.status}`);
+    const data = await resp.json();
+    const models = (data.data || []).map((m: any) => ({ id: m.id, owned_by: "anthropic" }));
+    models.sort((a: any, b: any) => a.id.localeCompare(b.id));
+    return models;
+  }
+
+  const vertexConfig = parseVertexConfig(vertexConfigRaw);
+  if (vertexConfig?.enabled) {
+    const token = await getVertexAccessToken(vertexConfig);
+    const { project_id, location } = vertexConfig;
+    const url = `https://${location}-aiplatform.googleapis.com/v1/projects/${project_id}/locations/${location}/publishers/google/models`;
+    const resp = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!resp.ok) throw new Error(`获取 Vertex Gemini 模型失败: ${resp.status}`);
+    const data = await resp.json();
+    const models = (data.publisherModels || []).map((m: any) => ({
+      id: (m.name || "").split("/").pop() || m.versionId || "",
+      owned_by: "google-vertex",
+    }));
+    return models.filter((m: any) => m.id).sort((a: any, b: any) => a.id.localeCompare(b.id));
+  }
+
+  const base = baseUrl.replace(/\/$/, "");
+  const resp = await fetch(`${base}/models?key=${encodeURIComponent(apiKey)}`);
+  if (!resp.ok) throw new Error(`获取 Gemini 模型失败: ${resp.status}`);
+  const data = await resp.json();
+  const models = (data.models || []).map((m: any) => ({ id: (m.name || "").replace(/^models\//, ""), owned_by: "google" }));
+  return models.sort((a: any, b: any) => a.id.localeCompare(b.id));
+}
+
+export { chatWithTools };
 
 // ─── 公开 API ───
 
@@ -197,7 +591,7 @@ export async function speakingReply(
   "suggestion": "更地道的替代表达建议（如有）或 null"
 }`;
 
-  const messages = [{ role: "system", content: system }, ...conversation];
+  const messages: ChatMessage[] = [{ role: "system", content: system }, ...(conversation as ChatMessage[])];
   const result = await chat(messages, 0.8);
   try {
     return parseJSON(result);

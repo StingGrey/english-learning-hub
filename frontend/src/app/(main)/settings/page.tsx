@@ -20,12 +20,20 @@ import {
   WifiOff,
 } from "lucide-react";
 
+const DEFAULT_BASE_URL: Record<"openai" | "claude" | "gemini", string> = {
+  openai: "https://api.openai.com/v1",
+  claude: "https://api.anthropic.com/v1",
+  gemini: "https://generativelanguage.googleapis.com/v1beta",
+};
+
 export default function SettingsPage() {
+  const [apiFormat, setApiFormat] = useState<"openai" | "claude" | "gemini">("openai");
   const [goal, setGoal] = useState("general");
   const [dailyMinutes, setDailyMinutes] = useState(30);
   const [apiKey, setApiKey] = useState("");
   const [baseUrl, setBaseUrl] = useState("https://api.openai.com/v1");
   const [model, setModel] = useState("gpt-4o-mini");
+  const [vertexConfig, setVertexConfig] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -57,8 +65,10 @@ export default function SettingsPage() {
       setGoal(data.goal || "general");
       setDailyMinutes(data.daily_minutes || 30);
       setApiKey(data.ai_api_key || "");
+      setApiFormat(data.ai_api_format || "openai");
       setBaseUrl(data.ai_base_url || "https://api.openai.com/v1");
       setModel(data.ai_model || "gpt-4o-mini");
+      setVertexConfig(data.ai_vertex_config || "");
 
       // 加载 WebDAV 配置
       const davConfig = await webdav.getConfig();
@@ -87,7 +97,7 @@ export default function SettingsPage() {
     setModelsLoading(true);
     setModelsError("");
     try {
-      const list = await fetchModels(apiKey.trim(), baseUrl.trim());
+      const list = await fetchModels(apiKey.trim(), baseUrl.trim(), apiFormat, vertexConfig);
       setModels(list);
       if (list.length > 0) {
         setShowModelDropdown(true);
@@ -100,13 +110,20 @@ export default function SettingsPage() {
     } finally {
       setModelsLoading(false);
     }
-  }, [apiKey, baseUrl]);
+  }, [apiKey, baseUrl, apiFormat, vertexConfig]);
 
   useEffect(() => {
     setModels([]);
     setModelsError("");
     setShowModelDropdown(false);
-  }, [apiKey, baseUrl]);
+  }, [apiKey, baseUrl, apiFormat, vertexConfig]);
+
+  useEffect(() => {
+    const targetDefault = DEFAULT_BASE_URL[apiFormat];
+    if (!baseUrl || Object.values(DEFAULT_BASE_URL).includes(baseUrl as any)) {
+      setBaseUrl(targetDefault);
+    }
+  }, [apiFormat]);
 
   const handleSave = async () => {
     await api.settings.update({
@@ -115,6 +132,8 @@ export default function SettingsPage() {
       ai_api_key: apiKey,
       ai_base_url: baseUrl,
       ai_model: model,
+      ai_api_format: apiFormat,
+      ai_vertex_config: vertexConfig,
     });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -223,9 +242,32 @@ export default function SettingsPage() {
             AI 配置
           </h2>
           <p className="font-mono text-xs text-gray-500 mb-4">
-            API Key 仅保存在本地浏览器中，不会发送到除你配置的 AI 服务商以外的任何服务器。
+            支持 OpenAI / Claude / Gemini 三种原生格式切换；Gemini 额外支持 Vertex JSON 服务账号鉴权。
           </p>
           <div className="space-y-4">
+            <div>
+              <label className="s-label">API 格式</label>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { value: "openai", label: "OpenAI" },
+                  { value: "claude", label: "Claude" },
+                  { value: "gemini", label: "Gemini" },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setApiFormat(opt.value)}
+                    className={`rounded-none py-2 font-sans font-bold text-xs uppercase tracking-wider border-2 border-black transition-all dark:border-white ${
+                      apiFormat === opt.value
+                        ? "bg-black text-white dark:bg-white dark:text-black"
+                        : "bg-white text-gray-500 hover:text-black dark:bg-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div>
               <label className="s-label">API 密钥</label>
               <div className="relative">
@@ -233,7 +275,7 @@ export default function SettingsPage() {
                   type={showKey ? "text" : "password"}
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="sk-..."
+                  placeholder={apiFormat === "gemini" ? "AIza... / Vertex 可留空" : apiFormat === "claude" ? "sk-ant-..." : "sk-..."}
                   className="s-input pr-10"
                 />
                 <button
@@ -251,10 +293,24 @@ export default function SettingsPage() {
                 type="text"
                 value={baseUrl}
                 onChange={(e) => setBaseUrl(e.target.value)}
-                placeholder="https://api.openai.com/v1"
+                placeholder={DEFAULT_BASE_URL[apiFormat]}
                 className="s-input"
               />
             </div>
+            {apiFormat === "gemini" && (
+              <div>
+                <label className="s-label">Vertex JSON 鉴权（可选）</label>
+                <textarea
+                  value={vertexConfig}
+                  onChange={(e) => setVertexConfig(e.target.value)}
+                  placeholder={'{"enabled":true,"project_id":"your-project","location":"us-central1","service_account_json":"{...}"}'}
+                  className="s-input min-h-[120px] font-mono text-xs"
+                />
+                <p className="font-mono text-[11px] text-gray-500 mt-1">
+                  启用后将使用 Vertex OAuth JWT 鉴权并调用 aiplatform endpoint；service_account_json 需为完整服务账号 JSON 字符串。
+                </p>
+              </div>
+            )}
             <div>
               <label className="s-label">模型</label>
               <div className="flex gap-2">
