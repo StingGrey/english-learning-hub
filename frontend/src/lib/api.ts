@@ -136,6 +136,57 @@ export const api = {
       const article = await db.article.get(id);
       if (!article) return null;
 
+      // 如果内容太短（jina 抓取也失败了），尝试兜底抓取
+      if (article.url && article.content.length < 500) {
+        try {
+          const fullContent = await rss.fetchFullContent(article.url);
+          if (fullContent && fullContent.length > article.content.length) {
+            const wordCount = fullContent.split(/\s+/).length;
+            const readability = rss.fleschReadingEase(fullContent);
+            const difficulty = rss.scoreToDifficulty(readability);
+            const newSentences = rss.splitSentences(fullContent);
+
+            await db.article.update(id, {
+              summary: article.content,
+              content: fullContent,
+              word_count: wordCount,
+              readability_score: readability,
+              difficulty,
+              is_read: true,
+            });
+
+            await db.articleSentence.where("article_id").equals(id).delete();
+            for (let i = 0; i < newSentences.length; i++) {
+              await db.articleSentence.add({
+                article_id: id,
+                index: i,
+                text_en: newSentences[i].trim(),
+              });
+            }
+
+            const sentences = await db.articleSentence
+              .where("article_id").equals(id).sortBy("index");
+
+            return {
+              ...article,
+              summary: article.content,
+              content: fullContent,
+              word_count: wordCount,
+              readability_score: readability,
+              difficulty,
+              is_read: true,
+              sentences: sentences.map((s) => ({
+                index: s.index,
+                text_en: s.text_en,
+                text_zh: s.text_zh || "",
+              })),
+            };
+          }
+        } catch {
+          // 兜底失败，静默回退到 RSS 摘要
+        }
+      }
+
       await db.article.update(id, { is_read: true });
 
       const sentences = await db.articleSentence

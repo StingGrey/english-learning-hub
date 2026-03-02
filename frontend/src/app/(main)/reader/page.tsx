@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useFetch } from "@/hooks/useFetch";
 import SelectionPopup from "@/components/reader/SelectionPopup";
-import { ArrowLeft, BookOpen, Globe, Loader2 } from "lucide-react";
+import { ArrowLeft, BookOpen, Globe, Loader2, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -134,8 +134,9 @@ function ReaderContent() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="font-mono text-sm text-gray-500">加载文章中...</p>
+      <div className="flex flex-col items-center justify-center h-64 gap-3">
+        <div className="w-5 h-5 border-2 border-black border-t-transparent animate-spin dark:border-white dark:border-t-transparent" />
+        <p className="font-mono text-sm text-gray-500">正在获取完整文章...</p>
       </div>
     );
   }
@@ -173,6 +174,17 @@ function ReaderContent() {
               <span className="font-mono text-xs text-gray-500">
                 {article.word_count} 词
               </span>
+              {article.url && (
+                <a
+                  href={article.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 font-mono text-xs text-gray-500 hover:text-black dark:hover:text-white transition-opacity"
+                >
+                  <ExternalLink size={10} />
+                  原文
+                </a>
+              )}
             </div>
           </div>
         </div>

@@ -72,7 +72,7 @@ function stripHTML(html: string): string {
 }
 
 /** 拆分句子 */
-function splitSentences(text: string): string[] {
+export function splitSentences(text: string): string[] {
   return text
     .replace(/\s+/g, " ")
     .split(/(?<=[.!?])\s+(?=["'A-Z])/)
@@ -140,7 +140,7 @@ async function upsertArticleFromItem(
 }
 
 /** 简易 Flesch Reading Ease */
-function fleschReadingEase(text: string): number {
+export function fleschReadingEase(text: string): number {
   const sentences = text.split(/[.!?]+/).filter((s) => s.trim());
   const words = text.split(/\s+/).filter(Boolean);
   if (!sentences.length || !words.length) return 50;
@@ -163,10 +163,95 @@ function fleschReadingEase(text: string): number {
   return Math.max(0, Math.min(100, score));
 }
 
-function scoreToDifficulty(score: number): "easy" | "medium" | "hard" {
+export function scoreToDifficulty(score: number): "easy" | "medium" | "hard" {
   if (score >= 70) return "easy";
   if (score >= 40) return "medium";
   return "hard";
+}
+
+/** 从文章页面 HTML 中提取正文（作为 r.jina.ai 失败时的兜底） */
+function extractArticleFromHTML(html: string): string | null {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+
+  const removeSelectors = [
+    "script", "style", "nav", "footer", "header", "aside",
+    "noscript", "iframe", "form", "svg",
+    "[role='navigation']", "[role='banner']", "[role='contentinfo']",
+    ".ad", ".ads", ".advertisement", ".social-share", ".comments",
+    ".sidebar", ".related", ".recommended", ".newsletter",
+  ];
+  for (const sel of removeSelectors) {
+    doc.querySelectorAll(sel).forEach((el) => el.remove());
+  }
+
+  const selectors = [
+    "[itemprop='articleBody']",
+    "article .article-body",
+    "article .story-body",
+    ".article-body", ".article-content",
+    ".story-body__inner", ".story-body",
+    ".post-content", ".entry-content", ".content-body",
+    "article", "[role='main']", "main",
+  ];
+
+  for (const sel of selectors) {
+    const el = doc.querySelector(sel);
+    if (!el) continue;
+    const paragraphs = el.querySelectorAll("p");
+    if (paragraphs.length > 0) {
+      const pTexts: string[] = [];
+      paragraphs.forEach((p) => {
+        const text = p.textContent?.trim();
+        if (text && text.length > 20) pTexts.push(text);
+      });
+      const combined = pTexts.join("\n\n");
+      if (combined.length > 200) return combined;
+    }
+    const text = el.textContent?.trim() || "";
+    if (text.length > 200) return text;
+  }
+
+  // 兜底：找包含最多 <p> 文本的容器
+  const paragraphs = doc.querySelectorAll("p");
+  const containers = new Map<Element, number>();
+  paragraphs.forEach((p) => {
+    const parent = p.parentElement;
+    if (parent) {
+      containers.set(parent, (containers.get(parent) || 0) + (p.textContent?.trim().length || 0));
+    }
+  });
+  let bestContainer: Element | null = null;
+  let bestLength = 0;
+  containers.forEach((length, el) => {
+    if (length > bestLength) { bestLength = length; bestContainer = el; }
+  });
+  if (bestContainer && bestLength > 200) {
+    const pTexts: string[] = [];
+    (bestContainer as Element).querySelectorAll("p").forEach((p) => {
+      const text = p.textContent?.trim();
+      if (text && text.length > 20) pTexts.push(text);
+    });
+    return pTexts.join("\n\n");
+  }
+  return null;
+}
+
+/** 从原文 URL 抓取完整内容（先试 r.jina.ai，再试 DOM 解析） */
+export async function fetchFullContent(url: string): Promise<string | null> {
+  if (!url) return null;
+  // 先试 jina reader
+  try {
+    const text = await fetchReadableArticle(url);
+    if (text.length > 200) return text;
+  } catch { /* fall through */ }
+  // 兜底：CORS 代理 + DOM 解析
+  try {
+    const html = await fetchWithProxy(url);
+    return extractArticleFromHTML(html);
+  } catch {
+    return null;
+  }
 }
 
 // ─── 公开 API ───
