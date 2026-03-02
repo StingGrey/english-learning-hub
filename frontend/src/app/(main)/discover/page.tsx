@@ -27,12 +27,16 @@ export default function DiscoverPage() {
   const [filter, setFilter] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [topic, setTopic] = useState("");
+  const [fetchLimit, setFetchLimit] = useState(15);
 
   const handleFetch = async () => {
     setFetching(true);
     setFetchMsg(null);
     try {
-      const result = await api.content.fetch({ topic: topic.trim() || undefined });
+      const result = await api.content.fetch({
+        topic: topic.trim() || undefined,
+        limitPerSource: fetchLimit,
+      });
       await refetch();
       setFetchMsg({ text: `获取到 ${result.new_articles} 篇新文章${topic.trim() ? `（主题：${topic.trim()}）` : ""}`, ok: true });
       setTimeout(() => setFetchMsg(null), 3000);
@@ -98,6 +102,22 @@ export default function DiscoverPage() {
           onChange={(e) => setTopic(e.target.value)}
           placeholder="例如：AI, climate change, finance"
           className="w-full md:max-w-md mt-2 px-3 py-2 font-mono text-sm border-2 border-black rounded-none bg-white text-black dark:bg-zinc-950 dark:text-white dark:border-white"
+        />
+      </div>
+
+      <div className="mb-4 md:mb-6">
+        <label className="s-label">每个源抓取数量</label>
+        <input
+          type="number"
+          min={1}
+          max={50}
+          value={fetchLimit}
+          onChange={(e) => {
+            const value = Number(e.target.value);
+            if (Number.isNaN(value)) return;
+            setFetchLimit(Math.min(50, Math.max(1, Math.floor(value))));
+          }}
+          className="w-full md:max-w-xs mt-2 px-3 py-2 font-mono text-sm border-2 border-black rounded-none bg-white text-black dark:bg-zinc-950 dark:text-white dark:border-white"
         />
       </div>
 
