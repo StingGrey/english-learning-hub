@@ -185,7 +185,7 @@ def _extract_article_content(url: str, entry) -> str:
 
 
 def _fetch_page_content(url: str) -> str:
-    """从网页抓取正文（JSON-LD articleBody / <article>）"""
+    """从网页抓取正文（JSON-LD / 语义容器 / 文本块打分）"""
     try:
         resp = httpx.get(url, timeout=10, follow_redirects=True, headers={
             "User-Agent": "Mozilla/5.0 (compatible; EnglishLearningHub/1.0)",
@@ -198,6 +198,10 @@ def _fetch_page_content(url: str) -> str:
     text = _extract_from_json_ld(html)
     if not text:
         text = _extract_from_article_tag(html)
+    if not text:
+        text = _extract_from_main_tag(html)
+    if not text:
+        text = _extract_from_best_text_blocks(html)
     return _clean_extracted_text(text)
 
 
@@ -244,10 +248,45 @@ def _extract_from_article_tag(html: str) -> str:
         return ""
 
     article_html = match.group(1)
-    article_html = re.sub(r"<script[^>]*>.*?</script>", " ", article_html, flags=re.IGNORECASE | re.DOTALL)
-    article_html = re.sub(r"<style[^>]*>.*?</style>", " ", article_html, flags=re.IGNORECASE | re.DOTALL)
-    article_html = re.sub(r"</p>|<br\s*/?>", "\n", article_html, flags=re.IGNORECASE)
-    return _strip_html(unescape(article_html))
+    return _to_text(article_html)
+
+
+def _extract_from_main_tag(html: str) -> str:
+    """从 <main> 标签提取正文（部分网站没有 article 标签）"""
+    match = re.search(r"<main[^>]*>(.*?)</main>", html, re.IGNORECASE | re.DOTALL)
+    if not match:
+        return ""
+    return _to_text(match.group(1))
+
+
+def _extract_from_best_text_blocks(html: str) -> str:
+    """按文本块评分提取正文，过滤导航/页脚等高链接密度区域"""
+    cleaned_html = re.sub(r"<script[^>]*>.*?</script>", " ", html, flags=re.IGNORECASE | re.DOTALL)
+    cleaned_html = re.sub(r"<style[^>]*>.*?</style>", " ", cleaned_html, flags=re.IGNORECASE | re.DOTALL)
+    cleaned_html = re.sub(r"<(nav|footer|header|aside)[^>]*>.*?</\1>", " ", cleaned_html, flags=re.IGNORECASE | re.DOTALL)
+
+    block_pattern = re.compile(r"<(p|h2|h3|li|blockquote)[^>]*>(.*?)</\1>", re.IGNORECASE | re.DOTALL)
+    blocks: list[str] = []
+
+    for _, block_html in block_pattern.findall(cleaned_html):
+        link_count = len(re.findall(r"<a\b", block_html, flags=re.IGNORECASE))
+        text = _to_text(block_html)
+        if not text or _is_noise_line(text):
+            continue
+
+        word_count = len(text.split())
+        if word_count < 6:
+            continue
+
+        # 链接密度过高通常是导航/相关推荐
+        if link_count >= 2 and link_count / max(word_count, 1) > 0.08:
+            continue
+
+        blocks.append(text)
+
+    if not blocks:
+        return ""
+    return "\n".join(blocks)
 
 
 def _looks_noisy(text: str) -> bool:
@@ -281,7 +320,7 @@ def _clean_extracted_text(text: str) -> str:
         line = re.sub(r"\s+", " ", line).strip()
         if not line:
             continue
-        if re.search(r"^(Close Ad Feedback|Subscribe|Sign in|Settings)$", line, re.IGNORECASE):
+        if _is_noise_line(line):
             continue
         lines.append(line)
 
@@ -293,6 +332,35 @@ def _split_sentences(text: str) -> list[str]:
     # 按照句号、感叹号、问号拆分，保留缩写
     sentences = re.split(r'(?<=[.!?])\s+(?=[A-Z])', text)
     return [s for s in sentences if len(s.strip()) > 5]
+
+
+def _to_text(html_snippet: str) -> str:
+    """将 HTML 片段转换为较干净的纯文本"""
+    snippet = re.sub(r"<script[^>]*>.*?</script>", " ", html_snippet, flags=re.IGNORECASE | re.DOTALL)
+    snippet = re.sub(r"<style[^>]*>.*?</style>", " ", snippet, flags=re.IGNORECASE | re.DOTALL)
+    snippet = re.sub(r"</p>|<br\s*/?>|</li>|</h[1-6]>", "\n", snippet, flags=re.IGNORECASE)
+    return _strip_html(unescape(snippet))
+
+
+def _is_noise_line(line: str) -> bool:
+    """判断单行文本是否属于导航/页脚/噪音"""
+    if re.search(r"^(Close Ad Feedback|Subscribe|Sign in|Settings)$", line, re.IGNORECASE):
+        return True
+
+    if re.search(r"^(Home|News|Sport|Business|Technology|Health|Culture|Travel|Weather)$", line, re.IGNORECASE):
+        return True
+
+    if re.search(r"(BBC in other languages|Read the BBC in your own language)", line, re.IGNORECASE):
+        return True
+
+    # 导航/标签行常见特征：大量分隔符且单词较短
+    if line.count("*") >= 3 or line.count("|") >= 3:
+        return True
+
+    if len(re.findall(r"https?://", line)) >= 2:
+        return True
+
+    return False
 
 
 def _score_to_difficulty(score: float) -> str:
