@@ -257,16 +257,17 @@ export async function fetchFullContent(url: string): Promise<string | null> {
 // ─── 公开 API ───
 
 /** 抓取所有活跃 RSS 源 */
-export async function fetchAllSources(topic?: string): Promise<number> {
+export async function fetchAllSources(topic?: string, limitPerSource = 15): Promise<number> {
   const sources = await db.newsSource.filter((s) => s.is_active).toArray();
   let totalNew = 0;
+  const normalizedLimit = Math.min(50, Math.max(1, Math.floor(limitPerSource || 15)));
 
   for (const source of sources) {
     try {
       const xml = await fetchWithProxy(source.url);
       const items = parseRSS(xml);
 
-      for (const item of items.slice(0, 15)) {
+      for (const item of items.slice(0, normalizedLimit)) {
         if (!matchesTopic(item, topic)) continue;
         const added = await upsertArticleFromItem(source, item);
         if (added) totalNew++;
@@ -285,7 +286,7 @@ export async function fetchAllSources(topic?: string): Promise<number> {
       const xml = await fetchWithProxy(googleRss);
       const items = parseRSS(xml);
 
-      for (const item of items.slice(0, 20)) {
+      for (const item of items.slice(0, normalizedLimit)) {
         if (!matchesTopic(item, topic)) continue;
         const added = await upsertArticleFromItem({ category: "topic" }, item);
         if (added) totalNew++;

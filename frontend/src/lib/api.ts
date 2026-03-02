@@ -77,8 +77,8 @@ export const api = {
 
   // ─── Content ───
   content: {
-    fetch: async (params?: { topic?: string }) => {
-      const count = await rss.fetchAllSources(params?.topic);
+    fetch: async (params?: { topic?: string; limitPerSource?: number }) => {
+      const count = await rss.fetchAllSources(params?.topic, params?.limitPerSource);
       return { new_articles: count };
     },
 
