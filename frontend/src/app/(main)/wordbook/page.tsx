@@ -60,6 +60,14 @@ export default function WordbookPage() {
     return pages.join("\n\n");
   };
 
+  // 提取 DOCX 文本
+  const extractDocxText = async (file: File): Promise<string> => {
+    const mammoth = await import("mammoth");
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    return result.value;
+  };
+
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -74,8 +82,11 @@ export default function WordbookPage() {
       if (ext === "pdf") {
         setUploadProgress("正在解析 PDF...");
         text = await extractPdfText(file);
+      } else if (ext === "docx") {
+        setUploadProgress("正在解析 DOCX...");
+        text = await extractDocxText(file);
       } else {
-        // TXT / CSV / 其他文本格式
+        // TXT / CSV / MD / JSON / HTML / XML / 其他文本格式
         text = await file.text();
       }
 
@@ -176,7 +187,7 @@ export default function WordbookPage() {
             上传词汇书
           </h2>
           <span className="font-mono text-xs text-gray-500">
-            支持 TXT / PDF / CSV
+            支持 TXT / MD / CSV / JSON / HTML / XML / DOCX / PDF
           </span>
         </div>
 
@@ -184,7 +195,7 @@ export default function WordbookPage() {
           <input
             ref={fileRef}
             type="file"
-            accept=".txt,.pdf,.csv,.text"
+            accept=".txt,.text,.md,.markdown,.csv,.json,.html,.htm,.xml,.docx,.pdf"
             onChange={handleUpload}
             disabled={uploading}
             className="hidden"
