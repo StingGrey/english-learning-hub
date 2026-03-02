@@ -29,3 +29,26 @@ def test_extract_from_json_ld_article_body():
     '''
     content = rss_service._extract_from_json_ld(html)
     assert "real article body" in content
+
+
+def test_extract_from_best_text_blocks_filters_navigation_links():
+    html = """
+    <html><body>
+      <nav><a href='/news'>News</a> <a href='/sport'>Sport</a></nav>
+      <p><a href='/news'>News</a> * <a href='/sport'>Sport</a> * <a href='/business'>Business</a></p>
+      <p>This is the first paragraph with enough words to be treated as article content.</p>
+      <p>This is the second paragraph that should remain after filtering noisy link blocks.</p>
+      <footer>BBC in other languages</footer>
+    </body></html>
+    """
+    content = rss_service._extract_from_best_text_blocks(html)
+    assert "first paragraph" in content
+    assert "second paragraph" in content
+    assert "News" not in content
+
+
+def test_clean_extracted_text_removes_footer_noise_line():
+    raw = "BBC in other languages\nThis is clean story paragraph with enough details."
+    cleaned = rss_service._clean_extracted_text(raw)
+    assert "BBC in other languages" not in cleaned
+    assert "clean story paragraph" in cleaned
