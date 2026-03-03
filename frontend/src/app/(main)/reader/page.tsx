@@ -100,7 +100,7 @@ function ReaderContent() {
   }, []);
 
   const handleTouchEnd = useCallback(() => {
-    window.setTimeout(triggerSelectionPopup, 80);
+    window.setTimeout(triggerSelectionPopup, 10);
   }, [triggerSelectionPopup]);
 
   useEffect(() => {
